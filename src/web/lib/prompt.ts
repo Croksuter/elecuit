@@ -1,5 +1,7 @@
 // role: holds the example netlist and the instruction texts users give to a chat model.
 
+import { version } from "../../../package.json";
+
 const EXAMPLE = `# 1-3 개선: 전하 공유를 막는 X precharge
 input  A B phi
 output Z
@@ -12,8 +14,9 @@ pmos P2 g=phi d=X  s=VDD
 inv  I1 in=Y  out=Z
 `;
 
-// jsDelivr serves the tracked bundle from the GitHub repository; `@0.1` follows 0.1.x tags.
-const EMBED_SCRIPT_URL = "https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.1/dist/elecuit.js";
+// jsDelivr serves the tracked bundle from the GitHub repository. The address pins the exact tag,
+// which is the package version, so a template keeps the bundle it was written for.
+const EMBED_SCRIPT_URL = `https://cdn.jsdelivr.net/gh/Croksuter/elecuit@${version}/dist/elecuit.js`;
 
 const GRAMMAR = `netlist 규칙
 - 한 줄에 소자 하나: 종류 이름 단자=노드 …

@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 
 import { lint } from "../lint";
 import { parse } from "../netlist";
-import { canvasPrompt, EXAMPLE } from "../prompt";
+import { version } from "../../../../package.json";
+import { canvasPrompt, EMBED_SCRIPT_URL, EXAMPLE } from "../prompt";
 
 function messages(text: string): string[] {
   const { circuit, diagnostics } = parse(text);
@@ -91,5 +92,12 @@ describe("canvasPrompt", () => {
     expect(prompt.indexOf('<script src="https://example.test/elecuit.js">')).toBeGreaterThan(
       block!.index,
     );
+  });
+
+  it("pins the bundle address to the exact package version", () => {
+    expect(EMBED_SCRIPT_URL).toBe(
+      `https://cdn.jsdelivr.net/gh/Croksuter/elecuit@${version}/dist/elecuit.js`,
+    );
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });
