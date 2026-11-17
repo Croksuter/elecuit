@@ -97,6 +97,8 @@ buf OUTBUF in=FMUX out=F
 cap CF a=F b=GND value=$C_F$
 cap CS a=SUM b=GND value=$C_S$
 cap CC a=CO b=GND value=$C_C$
+power VDD
+ground GND
 </script>
     <hr />
     <script type="text/elecuit" title="공통 이미터 증폭기">
@@ -110,6 +112,8 @@ cap Cin a=in b=base
 vsrc Vin p=in n=GND value=$v_{in}$
 cap Cout a=col b=out
 res RL a=out b=GND value=$R_L$
+power VCC
+ground GND
 </script>
     <hr />
     <script type="text/elecuit" title="RLC 저역 통과">
@@ -117,6 +121,7 @@ vsrc V1 p=in n=GND value=$v_s$
 res R1 a=in b=n1 value=$R$
 ind L1 a=n1 b=out value=$L$
 cap C1 a=out b=GND value=$C$
+ground GND
 </script>
     <hr />
     <script type="text/elecuit" title="휘트스톤 브리지">
@@ -126,6 +131,7 @@ res R2 a=top b=r
 res R3 a=l b=GND
 res R4 a=r b=GND
 res R5 a=l b=r
+ground GND
 </script>
     <hr />
     <script type="text/elecuit" title="브리지 정류기">
@@ -136,6 +142,7 @@ diode D3 a=GND k=p
 diode D4 a=GND k=n
 res RL a=o b=GND
 cap CL a=o b=GND
+ground GND
 </script>
     <hr />
     <script type="text/elecuit" title="전송 게이트와 DRAM 셀">
@@ -143,6 +150,7 @@ nmos TN g=EN d=A s=B
 pmos TP g=ENB d=A s=B
 nmos MA g=WL d=BL s=store
 cap CS a=store b=GND value=$C_S$
+ground GND
 </script>
     <hr />
     <script type="text/elecuit" title="전류 미러와 반전 증폭기">
@@ -153,6 +161,8 @@ res RL a=VDD b=out
 res RI a=vin b=minus value=$R_1$
 res RF a=minus b=vout value=$R_2$
 opamp U1 p=GND n=minus out=vout
+power VDD
+ground GND
 </script>
     <hr />
     <script type="text/elecuit" title="플립플롭, MUX, 래치 루프, 그 밖의 소자">
@@ -167,6 +177,8 @@ res R1 a=k1 b=GND value=330
 zener Z1 a=GND k=b1
 switch S1 a=VCC b=S2
 pnp Q2 b=b1 c=VEE e=VCC
+power VCC
+ground GND VEE
 </script>
     <hr />
     <script type="text/elecuit" title="domino 게이트 (기존 예제)">
@@ -179,6 +191,8 @@ nmos N2 g=B   d=X  s=n1
 nmos N3 g=phi d=n1 s=GND
 pmos P2 g=phi d=X  s=VDD
 inv  I1 in=Y  out=Z
+power VDD
+ground GND
 </script>
     <hr />
     <script src="../dist/elecuit.js"></script>

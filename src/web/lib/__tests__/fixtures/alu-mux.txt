@@ -1,6 +1,8 @@
 # Complete 1-bit ALU
 input A B CI S0 S1 S2 phi CLK EN
 output F SUM CO EQ Q L
+power VDD
+ground GND
 
 label CI $C_{in}$
 label CO $C_{out}$

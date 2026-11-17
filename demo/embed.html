@@ -16,6 +16,8 @@
       nmos N2 g=B   d=X  s=n1
       nmos N3 g=phi d=n1 s=GND
       inv  I1 in=Y  out=Z
+      power VDD
+      ground GND
     </script>
     <script type="text/elecuit" title="개선 회로: $X$를 precharge">
       input  A B phi
@@ -27,12 +29,15 @@
       nmos N3 g=phi d=n1 s=GND
       pmos P2 g=phi d=X  s=VDD
       inv  I1 in=Y  out=Z
+      power VDD
+      ground GND
     </script>
     <p>오류가 있는 netlist는 아래처럼 행 번호와 함께 보입니다.</p>
     <script type="text/elecuit">
       nmos N1 g=A d=Y s=X
       nmos N2 g=B d=x s=GND
       pmos P1 g=A d=Y
+      ground GND
     </script>
     <script src="../dist/elecuit.js"></script>
   </body>

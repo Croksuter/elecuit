@@ -5,6 +5,8 @@ import { version } from "../../../package.json";
 const EXAMPLE = `# 1-3 개선: 전하 공유를 막는 X precharge
 input  A B phi
 output Z
+power  VDD
+ground GND
 label  phi $\\phi$
 pmos P1 g=phi d=Y  s=VDD
 nmos N1 g=A   d=Y  s=X
@@ -25,7 +27,7 @@ const LATEST_DOCUMENT_URL = "https://cdn.jsdelivr.net/gh/Croksuter/elecuit@lates
 const GRAMMAR = `netlist 규칙
 - 한 줄에 소자 하나: 종류 이름 단자=노드 …
 - 연결은 노드 이름이 같은지로만 정해집니다. 같은 노드는 철자와 대소문자까지 똑같이 씁니다.
-- 예약된 이름: VDD·VCC는 양의 전원, GND는 접지, VSS·VEE는 음의 전원입니다.
+- 전원과 접지는 반드시 power와 ground 줄로 선언합니다. 이름만으로 전원이 되지는 않습니다. 선언하지 않은 VDD나 GND는 보통 노드로 다뤄져 회로가 틀리게 그려집니다.
 - 노드와 소자 이름은 영문자·숫자·밑줄만 씁니다 (예: phi, n1, CLK_b).
 - 화면에 보일 이름을 수식으로 바꾸려면 label 노드 $KaTeX$ 를 씁니다 (예: label phi $\\phi$, label CLK_b $\\overline{CLK}$).
 - 주석은 # 뒤에 씁니다.
@@ -51,6 +53,8 @@ const GRAMMAR = `netlist 규칙
 - block 이름 in=A,B out=X,Y [title=$\\text{ADC}$] (위에 없는 부품은 이름 붙인 상자로 씁니다)
 
 선언
+- power VDD …   항상 1인 전원 노드. 여러 개면 한 줄에 나열합니다 (power VDD VDDA).
+- ground GND …  항상 0인 접지 노드. 음의 전원(VSS, VEE)도 ground로 선언합니다.
 - input A B …   외부 입력. 미리보기에서 사용자가 눌러 0과 1을 바꿔 가며 회로의 값을 봅니다.
 - output Z …    외부 출력`;
 

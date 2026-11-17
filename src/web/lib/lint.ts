@@ -2,7 +2,6 @@
 
 import katex from "katex";
 
-import { isBottomRail, isRail, isTopRail } from "./netlist";
 import type { Circuit, Diagnostic, Element, Terminal } from "./netlist";
 
 interface NetUse {
@@ -30,6 +29,7 @@ function collectNetUses(circuit: Circuit): Map<string, NetUse[]> {
 function lint(circuit: Circuit): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const uses = collectNetUses(circuit);
+  const { rails } = circuit;
   const declared = new Set([...circuit.inputs, ...circuit.outputs].map((entry) => entry.net));
   const known = new Set([...uses.keys(), ...declared]);
 
@@ -38,7 +38,7 @@ function lint(circuit: Circuit): Diagnostic[] {
   }
 
   for (const [net, list] of uses) {
-    if (isRail(net) || declared.has(net) || list.length > 1) continue;
+    if (rails.has(net) || declared.has(net) || list.length > 1) continue;
     const similar = [...known].find(
       (other) => other !== net && other.toLowerCase() === net.toLowerCase(),
     );
@@ -53,8 +53,8 @@ function lint(circuit: Circuit): Diagnostic[] {
       warn(element.line, `${element.name}: 두 단자가 같은 노드 ${first.net}에 묶여 있습니다.`);
     }
     const isAcrossSupply =
-      (isTopRail(first.net) && isBottomRail(second.net)) ||
-      (isBottomRail(first.net) && isTopRail(second.net));
+      (rails.isPower(first.net) && rails.isGround(second.net)) ||
+      (rails.isGround(first.net) && rails.isPower(second.net));
     if (element.control !== null && isAcrossSupply) {
       warn(element.line, `${element.name}: 켜지면 ${first.net}와 ${second.net}가 바로 이어집니다.`);
     }
@@ -62,7 +62,7 @@ function lint(circuit: Circuit): Diagnostic[] {
 
   for (const element of circuit.elements) {
     if (element.type !== "device" || !element.isAssumedWeak) continue;
-    const node = element.pins.find((pin) => !isRail(pin.net))!;
+    const node = element.pins.find((pin) => !rails.has(pin.net))!;
     warn(
       element.line,
       `${element.name}: ${node.net}를 반전한 ${element.control!.net}가 게이트로 돌아오는 keeper로 보고 약한 소자로 계산합니다. 줄 끝에 weak를 쓰면 이 안내가 사라집니다.`,
@@ -86,8 +86,28 @@ function lint(circuit: Circuit): Diagnostic[] {
     }
   }
 
-  for (const entry of [...circuit.inputs, ...circuit.outputs]) {
+  for (const entry of [
+    ...circuit.inputs,
+    ...circuit.outputs,
+    ...circuit.power,
+    ...circuit.ground,
+  ]) {
     if (!uses.has(entry.net)) warn(entry.line, `선언한 노드 ${entry.net}를 쓰는 소자가 없습니다.`);
+  }
+  // A supply is one only when declared. These names are almost always meant as supplies, so
+  // leaving the declaration out is worth pointing at; it does not make them supplies.
+  for (const [net, list] of uses) {
+    if (rails.has(net)) continue;
+    const keyword = /^(vdd|vcc)$/i.test(net)
+      ? "power"
+      : /^(gnd|vss|vee)$/i.test(net)
+        ? "ground"
+        : null;
+    if (keyword === null) continue;
+    warn(
+      list[0].line,
+      `${net}: ${keyword}로 선언하지 않아 보통 노드로 다룹니다. ${keyword === "power" ? "전원" : "접지"}이면 "${keyword} ${net}" 줄을 넣으세요.`,
+    );
   }
   for (const entry of circuit.inputs) {
     const driver = drivers.get(entry.net);

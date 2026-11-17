@@ -3,8 +3,7 @@
 import { drawBlock } from "./blocks";
 import { boundsOf, shift, Sketch } from "./drawing";
 import type { Drawing, Measure } from "./drawing";
-import { isRail } from "./netlist";
-import type { Block, Circuit, Device } from "./netlist";
+import type { Block, Circuit, Device, Rails } from "./netlist";
 import { layoutNetwork } from "./network";
 import { place } from "./place";
 import type { Module } from "./place";
@@ -12,7 +11,7 @@ import type { Module } from "./place";
 const MARGIN = 16;
 
 // Groups devices whose pins share a node other than a rail; control terminals do not join groups.
-function findClusters(devices: Device[]): Device[][] {
+function findClusters(devices: Device[], rails: Rails): Device[][] {
   const parent = new Map<string, string>();
   function find(key: string): string {
     if (!parent.has(key)) parent.set(key, key);
@@ -20,12 +19,12 @@ function findClusters(devices: Device[]): Device[][] {
     return key;
   }
   function keyOf(device: Device): string {
-    const node = device.pins.find((pin) => !isRail(pin.net));
+    const node = device.pins.find((pin) => !rails.has(pin.net));
     return node ? `net:${node.net}` : `device:${device.name}`;
   }
   for (const device of devices) {
     for (const pin of device.pins) {
-      if (!isRail(pin.net)) parent.set(find(`net:${pin.net}`), find(keyOf(device)));
+      if (!rails.has(pin.net)) parent.set(find(`net:${pin.net}`), find(keyOf(device)));
     }
   }
   const clusters = new Map<string, Device[]>();
@@ -37,7 +36,8 @@ function findClusters(devices: Device[]): Device[][] {
 }
 
 function layout(circuit: Circuit, measure: Measure): Drawing {
-  const createSketch = (): Sketch => new Sketch(circuit.labels, measure);
+  const { rails } = circuit;
+  const createSketch = (): Sketch => new Sketch(circuit.labels, rails, measure);
   const blocks = circuit.elements.filter((element) => element.type === "block");
   // A two-terminal device from an op-amp's output back to one of its inputs is drawn with the
   // op-amp, around its body, instead of in a cluster.
@@ -50,7 +50,7 @@ function layout(circuit: Circuit, measure: Measure): Drawing {
         block.kind === "opamp" &&
         nets[0] !== nets[1] &&
         nets.includes(block.outputs[0].net) &&
-        block.inputs.some((input) => !isRail(input.net) && nets.includes(input.net)),
+        block.inputs.some((input) => !rails.has(input.net) && nets.includes(input.net)),
     );
     if (owner) feedback.set(element, owner);
   }
@@ -62,14 +62,14 @@ function layout(circuit: Circuit, measure: Measure): Drawing {
   );
 
   const modules: Module[] = [];
-  for (const cluster of findClusters(devices)) {
+  for (const cluster of findClusters(devices, rails)) {
     const sketch = createSketch();
     const pins = layoutNetwork(cluster, sketch);
     const nodes = [
       ...new Set(
         cluster
           .flatMap((device) => device.pins.map((pin) => pin.net))
-          .filter((net) => !isRail(net)),
+          .filter((net) => !rails.has(net)),
       ),
     ];
     const controls = cluster.flatMap((device) =>

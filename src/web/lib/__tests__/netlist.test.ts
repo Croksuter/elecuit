@@ -16,8 +16,10 @@ import {
   promptDocument,
 } from "../prompt";
 
+import { withRails } from "./support";
+
 function messages(text: string): string[] {
-  const { circuit, diagnostics } = parse(text);
+  const { circuit, diagnostics } = parse(withRails(text));
   return [...diagnostics, ...lint(circuit)].map(
     (entry) => `${entry.line}:${entry.severity}:${entry.message}`,
   );
@@ -97,6 +99,33 @@ describe("parse", () => {
     expect(result[4]).toBe("5:error:G1: 출력을 VCC에 연결할 수 없습니다.");
   });
 
+  it("takes supplies from power and ground lines only", () => {
+    const declared = parse("power VDD V3P3\nground AGND\nres R1 a=V3P3 b=AGND").circuit;
+    expect(declared.rails.isPower("V3P3")).toBe(true);
+    expect(declared.rails.isGround("AGND")).toBe(true);
+    expect(declared.rails.has("GND")).toBe(false);
+    // Without the lines the usual names are ordinary nodes, and lint says what is missing.
+    const bare = "pmos P1 g=A d=Y s=VDD\nnmos N1 g=A d=Y s=GND";
+    expect(parse(bare).circuit.rails.has("VDD")).toBe(false);
+    const { circuit } = parse(bare);
+    const hints = lint(circuit).map((entry) => `${entry.line}:${entry.message}`);
+    expect(hints).toContain(
+      '1:VDD: power로 선언하지 않아 보통 노드로 다룹니다. 전원이면 "power VDD" 줄을 넣으세요.',
+    );
+    expect(hints).toContain(
+      '2:GND: ground로 선언하지 않아 보통 노드로 다룹니다. 접지이면 "ground GND" 줄을 넣으세요.',
+    );
+  });
+
+  it("rejects a supply declared twice, as an input, or as a block's output", () => {
+    const result = messages(
+      ["power VDD", "ground VDD GND", "input VDD A", "inv G1 in=A out=GND"].join("\n"),
+    );
+    expect(result[0]).toBe("2:error:ground: VDD는 이미 1행에서 전원이나 접지로 선언했습니다.");
+    expect(result[1]).toBe("3:error:input: VDD는 전원이나 접지라 input로 선언할 수 없습니다.");
+    expect(result[2]).toBe("4:error:G1: 출력을 GND에 연결할 수 없습니다.");
+  });
+
   it("reports malformed lines", () => {
     const text = [
       "nmos N1 g=$A$ d=Y s=GND",
@@ -129,20 +158,23 @@ describe("lint", () => {
   it("takes a keeper as weak and says so until the line says weak itself", () => {
     const stage = ["pmos P1 g=phi d=Y s=VDD", "nmos N1 g=A d=Y s=GND", "inv I1 in=Y out=Z"];
     const assumed = [...stage, "pmos PK g=Z d=Y s=VDD"].join("\n");
-    expect(parse(assumed).circuit.elements[3]).toMatchObject({ isWeak: true, isAssumedWeak: true });
+    expect(parse(withRails(assumed)).circuit.elements[3]).toMatchObject({
+      isWeak: true,
+      isAssumedWeak: true,
+    });
     expect(
       messages(assumed).some((entry) =>
         entry.startsWith("4:warning:PK: Y를 반전한 Z가 게이트로 돌아오는 keeper로 보고"),
       ),
     ).toBe(true);
     const written = [...stage, "pmos PK g=Z d=Y s=VDD weak"].join("\n");
-    expect(parse(written).circuit.elements[3]).toMatchObject({
+    expect(parse(withRails(written)).circuit.elements[3]).toMatchObject({
       isWeak: true,
       isAssumedWeak: false,
     });
     expect(messages(written).filter((entry) => entry.includes("PK"))).toEqual([]);
     // The precharge transistor pulls the same way but is not gated by its own node.
-    expect(parse(assumed).circuit.elements[0]).toMatchObject({ isWeak: false });
+    expect(parse(withRails(assumed)).circuit.elements[0]).toMatchObject({ isWeak: false });
   });
 
   it("rejects two drivers on one output and unreadable KaTeX", () => {

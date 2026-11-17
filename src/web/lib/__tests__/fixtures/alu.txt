@@ -2,6 +2,8 @@
 # Static logic + dynamic Domino carry
 input A B CI S2 S1 S0 phi
 output F SUM CO EQ
+power VDD
+ground GND
 label CI $C_{in}$
 label CO $C_{out}$
 label phi $\phi$

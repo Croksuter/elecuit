@@ -31,6 +31,8 @@ https://cdn.jsdelivr.net/gh/Croksuter/elecuit@latest/dist/prompt.md 이 문서�
 # domino 게이트에 X precharge를 더한 회로
 input  A B phi
 output Z
+power  VDD
+ground GND
 label  phi $\phi$
 pmos P1 g=phi d=Y  s=VDD
 nmos N1 g=A   d=Y  s=X
@@ -55,11 +57,13 @@ inv  I1 in=Y  out=Z
 | `dff` | `이름 d= clk= q= [qb=] [set=] [rst=]` |
 | `latch` | `이름 d= en= q= [qb=]` |
 | `block` | `이름 in=A,B out=X,Y [title=$\text{ADC}$]` 위에 없는 부품을 상자로 |
+| `power`, `ground` | `VDD …`, `GND …` 항상 1인 전원과 항상 0인 접지 |
 | `input`, `output` | `A B …` 외부 단자 |
 | `label` | `노드 $KaTeX$` 화면에 보일 이름 |
 
 - 소자에는 `value=$10\,\mathrm{k}\Omega$`처럼 값을 붙일 수 있습니다. `$…$` 없이 `value=330`처럼 쓰면 글자 그대로 보입니다.
-- `VDD`·`VCC`(양의 전원), `GND`(접지), `VSS`·`VEE`(음의 전원)는 예약된 이름입니다.
+- 전원과 접지는 `power`와 `ground` 줄로 선언한 노드뿐입니다. 예약된 이름은 없어서, 선언하지 않은 `VDD`나 `GND`는 보통 노드로 다룹니다. 그럴 때는 검사 결과가 빠진 줄을 알려 줍니다.
+- 음의 전원(`VSS`, `VEE`)도 `ground`로 선언합니다. 접지가 여럿이면 접지 기호 옆에 이름이 붙습니다.
 - 노드와 소자 이름은 영문자·숫자·밑줄만 씁니다.
 - 주석은 `#` 뒤에 씁니다.
 
@@ -67,10 +71,12 @@ inv  I1 in=Y  out=Z
 
 ```html
 <script type="text/elecuit" title="인버터">
+power VDD
+ground GND
 pmos P1 g=A d=Y s=VDD
 nmos N1 g=A d=Y s=GND
 </script>
-<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.7.3/dist/elecuit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.8.0/dist/elecuit.js"></script>
 ```
 
 블록마다 회로도, 검사 결과(행 번호 포함), 노드에 연결된 단자 목록이 그려집니다. 수식은 KaTeX로 그립니다.
@@ -85,7 +91,7 @@ nmos N1 g=A d=Y s=GND
 
 ## 동작 보기
 
-점선으로 두른 입력을 누르면 0 → 1 → 해제 순으로 바뀌고, 그에 따라 정해지는 값이 선과 이름의 색(1은 주황, 0은 파랑)으로 보입니다. 값이 정해지지 않는 부분은 평소 그림 그대로입니다. 전원과 접지는 아무것도 누르기 전부터 1과 0으로 보입니다. 누를 입력이 없는 회로(증폭기, 필터 등)에서는 전원과 접지 말고는 값을 칠하지 않습니다. 켜진 트랜지스터는 채널이 초록으로, 꺼진 것은 흐리게 보입니다.
+점선으로 두른 입력을 누르면 0 → 1 → 해제 순으로 바뀌고, 그에 따라 정해지는 값이 선과 이름의 색(1은 주황, 0은 파랑)으로 보입니다. 값이 정해지지 않는 부분은 평소 그림 그대로입니다. `power`와 `ground`로 선언한 전원과 접지는 아무것도 누르기 전부터 1과 0으로 보입니다. 누를 입력이 없는 회로(증폭기, 필터 등)에서는 전원과 접지 말고는 값을 칠하지 않습니다. 켜진 트랜지스터는 채널이 초록으로, 꺼진 것은 흐리게 보입니다.
 
 회로도 위에는 입력이 한 줄로 모여 있습니다. 입력마다 이름과 지금 값(0, 1, 해제는 –)이 보이고, 여기서 눌러도 회로도에서 누른 것과 같습니다. 입력 버튼에 마우스를 올리면 그 입력이 회로도의 어디로 가는지 강조됩니다.
 

@@ -54,6 +54,8 @@ interface Obstacle {
   isWire: boolean;
 }
 
+// How the usual supply names are typeset. This is typography only: a name is a supply when the
+// netlist declares it, whatever it is called.
 const RAIL_TEX: Record<string, string> = {
   VDD: "V_{DD}",
   VCC: "V_{CC}",
@@ -78,6 +80,7 @@ class Sketch {
 
   constructor(
     private readonly labels: Circuit["labels"],
+    readonly rails: Circuit["rails"],
     private readonly measure: Measure,
   ) {}
 
