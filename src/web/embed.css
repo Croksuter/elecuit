@@ -1,4 +1,4 @@
-/* role: group, figure, title, diagnostics and net-info styles of embedded schematics inside a host page. */
+/* role: group, frame, floating controls and diagnostics styles of embedded schematics inside a host page. */
 
 /* The gap and the column widths come from embed.ts, which computes the shared scale with them. */
 .elecuit-group {
@@ -30,8 +30,51 @@
   }
 }
 
+/* The frame is the sheet of paper: the schematic scrolls inside it and the controls float over
+   its corners, like a map's. It is always light, whatever the host page's colours. */
+.elecuit-frame {
+  position: relative;
+  min-height: 236px;
+  overflow: hidden;
+  border: 1px solid rgb(16 24 40 / 14%);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1b1f24;
+}
+
+/* A schematic larger than the frame scrolls inside it. embed.ts sets the padding that keeps the
+   fitted schematic clear of the controls. */
+.elecuit-viewport {
+  min-height: inherit;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+/* The frame is the paper, so the sheet inside it carries no card of its own. */
+.elecuit .sheet {
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.elecuit-head {
+  position: absolute;
+  top: 12px;
+  right: 64px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.elecuit-head > * {
+  pointer-events: auto;
+}
+
 .elecuit-title {
-  margin: 0 4px 4px;
+  margin: 0;
   font-size: 14px;
   font-weight: 600;
 }
@@ -40,14 +83,61 @@
   font-size: 1em;
 }
 
-/* A schematic wider than the viewport at its smallest scale scrolls inside it. */
-.elecuit-viewport {
-  padding: 4px;
-  overflow: auto;
+.elecuit-inputs {
+  padding: 5px;
+  border: 1px solid rgb(16 24 40 / 14%);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgb(16 24 40 / 12%);
 }
 
-.elecuit .sheet {
-  box-shadow: 0 0 0 1px rgb(16 24 40 / 12%);
+.elecuit-tools {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgb(16 24 40 / 14%);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgb(16 24 40 / 12%);
+}
+
+.elecuit-tools-upper {
+  top: 12px;
+}
+
+.elecuit-tools-lower {
+  bottom: 12px;
+}
+
+.elecuit-tools button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: #ffffff;
+  color: #1b1f24;
+  cursor: pointer;
+}
+
+.elecuit-tools button + button {
+  border-top: 1px solid rgb(16 24 40 / 10%);
+}
+
+.elecuit-tools button:hover {
+  background: #f1f3f6;
+}
+
+.elecuit-tools button[aria-pressed="true"] {
+  background: #1b1f24;
+  color: #ffffff;
+}
+
+.elecuit-tools button[hidden] {
+  display: none;
 }
 
 .elecuit-diagnostics {
@@ -72,42 +162,4 @@
 
 .elecuit-diagnostics .warning {
   color: var(--elecuit-warning);
-}
-
-.elecuit-info {
-  margin-top: 6px;
-  min-height: 1.5em;
-  opacity: 0.7;
-  font-size: 12px;
-}
-
-.elecuit-tools {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.elecuit-tools button {
-  min-width: 26px;
-  padding: 2px 8px;
-  border: 1px solid currentColor;
-  border-radius: 6px;
-  background: none;
-  color: inherit;
-  font: inherit;
-  font-size: 12px;
-  opacity: 0.7;
-  cursor: pointer;
-}
-
-.elecuit-tools button:hover {
-  opacity: 1;
-}
-
-.elecuit-tools button[hidden] {
-  display: none;
-}
-
-.elecuit-inputs {
-  margin: 0 4px 6px;
 }
