@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>elecuit</title>
+  </head>
+  <body>
+    <header class="bar">
+      <div class="brand">
+        <span class="mark">elecuit</span>
+        <span class="tagline">netlist를 회로도로</span>
+      </div>
+      <div class="actions">
+        <button type="button" id="load-example" class="quiet">예제</button>
+        <button
+          type="button"
+          id="copy-prompt"
+          class="primary"
+          title="GPT에 먼저 붙여 넣으면 답을 이 형식으로 받습니다"
+        >
+          GPT용 프롬프트 복사
+        </button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="editor-pane" aria-label="netlist 편집">
+        <div class="pane-head">
+          <label for="source">netlist</label>
+          <span id="status" class="status" role="status"></span>
+        </div>
+        <div class="editor">
+          <div class="gutter" id="gutter" aria-hidden="true"></div>
+          <textarea
+            id="source"
+            spellcheck="false"
+            autocomplete="off"
+            autocapitalize="off"
+            placeholder="GPT 답변을 통째로 붙여 넣어도 됩니다. ```elecuit 블록만 읽습니다.&#10;&#10;nmos N1 g=A d=Y s=X"
+          ></textarea>
+        </div>
+        <ul class="diagnostics" id="diagnostics"></ul>
+        <details class="grammar">
+          <summary>문법</summary>
+          <dl>
+            <dt><code>nmos</code> <code>pmos</code></dt>
+            <dd><code>이름 g=게이트 d=드레인 s=소스</code></dd>
+            <dt><code>inv</code> <code>buf</code></dt>
+            <dd><code>이름 in=A out=Z</code></dd>
+            <dt><code>nand</code> <code>nor</code> <code>and</code> <code>or</code></dt>
+            <dd><code>이름 in=A,B out=Z</code></dd>
+            <dt><code>cap</code></dt>
+            <dd><code>이름 a=Y b=GND value=$C_L$</code></dd>
+            <dt><code>input</code> <code>output</code></dt>
+            <dd><code>A B …</code> 외부 단자</dd>
+            <dt><code>label</code></dt>
+            <dd><code>phi $\phi$</code> 노드의 표시 이름 (KaTeX)</dd>
+          </dl>
+          <p>
+            <code>VDD</code>·<code>GND</code>는 예약된 이름이고, 같은 이름의 노드끼리만 연결됩니다.
+          </p>
+        </details>
+        <p class="footnote">입력은 이 브라우저에만 저장됩니다.</p>
+      </section>
+
+      <section class="canvas-pane" aria-label="회로도">
+        <div class="canvas-tools">
+          <div class="zoom" role="group" aria-label="확대">
+            <button type="button" id="zoom-out" aria-label="축소" title="축소">−</button>
+            <button type="button" id="zoom-fit" title="화면에 맞춤">
+              <span id="zoom-value">100%</span>
+            </button>
+            <button type="button" id="zoom-in" aria-label="확대" title="확대">+</button>
+          </div>
+          <div class="export" role="group" aria-label="내보내기">
+            <button type="button" id="save-svg">SVG 저장</button>
+            <button type="button" id="save-png">PNG 저장</button>
+          </div>
+        </div>
+        <div class="canvas" id="canvas">
+          <div class="stage" id="stage"></div>
+          <div class="empty" id="empty">
+            <p>netlist를 넣으면 여기에 회로도가 그려집니다.</p>
+            <div class="empty-actions">
+              <button type="button" id="empty-example">예제 불러오기</button>
+              <button type="button" id="empty-prompt" class="primary">GPT용 프롬프트 복사</button>
+            </div>
+          </div>
+        </div>
+        <div class="canvas-foot">
+          <span id="hover-info" class="hover-info"
+            >노드에 마우스를 올리면 연결된 단자가 보입니다.</span
+          >
+          <span id="notes" class="notes"></span>
+        </div>
+      </section>
+    </main>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
