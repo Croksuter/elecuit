@@ -18,6 +18,10 @@
 - **7.** 배포 권한은 GitHub 저장소 쓰기 권한이므로 그 계정에 2단계 인증을 둔다 — 구현 GitHub 계정 설정(사용자) (created by discussions/2026-11-17-security.md)
 - **10.** 템플릿의 번들 주소는 범위가 아니라 정확한 태그(`package.json`의 `version`)를 가리킨다. 새 태그는 이미 배포된 템플릿에 반영되지 않는다 — 구현 `src/web/lib/prompt.ts`, 검사 `testing.md#8` (created by discussions/2026-11-17-security.md#2026-11-17-주소-고정)
 
+## 수용한 위험
+
+- **11.** 임베드 번들이 jsDelivr의 KaTeX 스타일을 무결성 해시(SRI) 없이 불러온다. jsDelivr나 그 경로가 변조되면 미리보기의 스타일이 바뀔 수 있다; 재검토 번들이 netlist 밖의 데이터를 다루게 되거나 KaTeX를 불러오는 방식을 바꿀 때; 승인 discussions/2026-11-17-security.md#2026-11-17-스타일-해시 (created by discussions/2026-11-17-security.md#2026-11-17-스타일-해시)
+
 ## 재점검
 
 - **8.** 서버·계정·모델 호출이 생기거나, 번들이 jsDelivr 밖의 주소를 새로 요청하게 되면 게이트를 다시 연다. (created by discussions/2026-11-17-security.md)
