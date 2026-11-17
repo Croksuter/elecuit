@@ -5,7 +5,6 @@
   touch-action: pan-x pan-y;
   --paper-ink: #1b1f24;
   --paper-muted: #7a8494;
-  --paper-accent: #2459d6;
   --level-high: #d9480f;
   --level-low: #1971c2;
   --device-on: #2b8a3e;
@@ -92,7 +91,8 @@
   font-size: 1em;
 }
 
-/* Hovering a net dims the sheet and lights the net and the elements on it. */
+/* Hovering a net dims the rest of the sheet. The net and the elements on it keep their own
+   colours, which may be showing logic levels; only the net's wires get thicker. */
 .stage.focusing .wire,
 .stage.focusing .dot {
   opacity: 0.22;
@@ -108,24 +108,8 @@
   opacity: 1;
 }
 
-.stage .wire.on,
-.stage .dot.on {
-  stroke: var(--paper-accent);
-  fill: var(--paper-accent);
-  stroke-width: 2.4;
-}
-
 .stage .wire.on {
-  fill: none;
-}
-
-.stage .body.on,
-.stage .bubble.on {
-  stroke: var(--paper-accent);
-}
-
-.stage .label.on[data-net] {
-  color: var(--paper-accent);
+  stroke-width: 2.4;
 }
 
 /* Logic levels: a net at 1 or 0 takes that level's colour, wires and name alike. */
