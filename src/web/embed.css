@@ -40,9 +40,10 @@
   font-size: 1em;
 }
 
+/* A schematic wider than the viewport at its smallest scale scrolls inside it. */
 .elecuit-viewport {
   padding: 4px;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .elecuit .sheet {

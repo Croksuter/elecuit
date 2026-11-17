@@ -2,7 +2,7 @@
 
 import katex from "katex";
 
-import type { Drawing, Primitive } from "./layout";
+import type { Drawing, Primitive } from "./drawing";
 
 const TRANSLATE = {
   start: "translate(0,-50%)",

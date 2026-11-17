@@ -19,6 +19,7 @@
 - ~~**10.** 템플릿의 번들 주소는 범위가 아니라 정확한 태그(`package.json`의 `version`)를 가리킨다. 새 태그는 이미 배포된 템플릿에 반영되지 않는다 — 구현 `src/web/lib/prompt.ts`, 검사 `testing.md#8`~~ (created by discussions/2026-11-17-security.md#2026-11-17-주소-고정) (changed to #12)
 - **12.** 지침 문서마다 그 안의 번들 주소는 같은 version의 정확한 태그를 가리켜, 지침과 번들이 항상 짝이 맞는다. 지침 문서 자체는 최신 주소로 자동 갱신되므로(#13), 이 고정은 새 릴리스가 퍼지는 것을 막는 통제가 아니다 — 구현 `src/web/lib/prompt.ts`, 검사 `testing.md#8` (created by discussions/2026-11-17-security.md#2026-11-17-자동-최신화) (changed from #10)
 - **14.** 블록의 `title`은 글자를 이스케이프하고 `$…$`로 감싼 부분만 KaTeX 기본 설정으로 그린다 — 구현 `src/web/lib/render.ts`, 검사 `testing.md#12` (created by discussions/2026-11-17-security.md#2026-11-17-블록-제목)
+- **15.** 소자의 `value`와 블록의 `title`은 `$…$`면 KaTeX 기본 설정으로, 아니면 글자를 이스케이프해 그린다 — 구현 `src/web/lib/render.ts`, 검사 `testing.md#14` (created by discussions/2026-11-17-security.md#2026-11-17-소자-값과-블록-제목)
 
 ## 수용한 위험
 

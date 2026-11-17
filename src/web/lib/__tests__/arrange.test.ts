@@ -29,8 +29,9 @@ describe("arrange", () => {
     expect(grid.columnWidths[0] + grid.columnWidths[1] + 20).toBeCloseTo(1000);
   });
 
-  it("shrinks a lone schematic as far as a narrow row needs", () => {
-    expect(arrange([800], 400, 20).scale).toBe(0.5);
+  it("shrinks a lone schematic to fit, but not below the scale it stays readable at", () => {
+    expect(arrange([800], 600, 20).scale).toBe(0.75);
+    expect(arrange([2600], 700, 20).scale).toBe(0.6);
   });
 
   it("refuses an empty group and a width that is not positive", () => {
