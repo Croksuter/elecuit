@@ -18,10 +18,13 @@ describe("render", () => {
       "label Y $\\htmlClass{evil}{y}$",
       "nmos N1 g=A d=Y s=GND",
       "cap C1 a=Y b=GND value=$\\text{<img src=x onerror=alert(1)>}$",
+      "res R1 a=Y b=GND value=<img/src=x/onerror=alert(1)>",
+      "block B1 in=Y title=<script>alert(1)</script>",
     ].join("\n");
     const html = render(layout(parse(text).circuit, measure));
     expect(html).not.toMatch(/<a\b/i);
     expect(html).not.toMatch(/<img\b/i);
+    expect(html).not.toMatch(/<script\b/i);
     expect(html).not.toMatch(/href\s*=/i);
     expect(html).not.toMatch(/class="[^"]*\bevil\b/);
   });

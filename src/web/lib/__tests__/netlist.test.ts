@@ -52,6 +52,51 @@ describe("parse", () => {
     expect(messages(answer)).toEqual(["6:error:N1: 단자 s가 없습니다."]);
   });
 
+  it("reads analog devices, blocks and values written without $", () => {
+    const text = [
+      "res R1 a=VCC b=out value=10k",
+      "npn Q1 b=in c=out e=GND",
+      "opamp U1 p=GND n=in out=out2",
+      "dff FF d=out2 clk=CLK q=Q",
+      "block ADC in=Q out=b0,b1 title=$\\text{ADC}$",
+    ].join("\n");
+    const { circuit, diagnostics } = parse(text);
+    expect(diagnostics).toEqual([]);
+    const [resistor, transistor, , , box] = circuit.elements;
+    expect(resistor).toMatchObject({ kind: "res", value: { text: "10k", isTex: false } });
+    expect(transistor).toMatchObject({
+      control: { key: "b", net: "in" },
+      pins: [
+        { key: "c", net: "out" },
+        { key: "e", net: "GND" },
+      ],
+    });
+    expect(box).toMatchObject({
+      outputs: [
+        { key: "out", net: "b0" },
+        { key: "out", net: "b1" },
+      ],
+      title: { text: "\\text{ADC}", isTex: true },
+    });
+  });
+
+  it("reports blocks and values that do not fit their form", () => {
+    const result = messages(
+      [
+        "opamp U1 p=A out=Y",
+        "dff F1 d=A,B clk=C q=Q",
+        "block B1",
+        "res R1 a=A b=B value=$x$y",
+        "nand G1 in=A,B out=VCC",
+      ].join("\n"),
+    );
+    expect(result[0]).toBe("1:error:U1: 단자 n가 없습니다.");
+    expect(result[1]).toBe("2:error:F1: 단자 d에는 노드 하나만 씁니다.");
+    expect(result[2]).toBe("3:error:B1: in이나 out에 노드가 하나는 있어야 합니다.");
+    expect(result[3]).toBe("4:error:R1: value의 수식은 $…$로 감싸야 합니다.");
+    expect(result[4]).toBe("5:error:G1: 출력을 VCC에 연결할 수 없습니다.");
+  });
+
   it("reports malformed lines", () => {
     const text = [
       "nmos N1 g=$A$ d=Y s=GND",

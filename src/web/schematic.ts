@@ -1,7 +1,7 @@
 // role: draws a netlist into a stage element in the browser (label measuring, rendering, net hover).
 
 import { layout } from "./lib/layout";
-import type { LabelKind, Measure } from "./lib/layout";
+import type { LabelKind, Measure } from "./lib/drawing";
 import { collectNetUses, lint } from "./lib/lint";
 import type { NetUse } from "./lib/lint";
 import { parse } from "./lib/netlist";

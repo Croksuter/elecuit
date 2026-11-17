@@ -16,3 +16,5 @@
 - **9.** 릴리스는 `npm version <새 버전> --no-git-tag-version`으로 version을 올리고, `README.md`의 주소를 같은 version으로 고치고, `npm run build`로 `dist`를 다시 만들어 커밋한 뒤, version과 같은 이름의 태그를 단다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-지침-문서-배포) (changed from #7)
 - **10.** 릴리스를 푸시한 뒤 `curl https://purge.jsdelivr.net/gh/Croksuter/elecuit@latest/dist/prompt.md`로 최신 주소의 캐시를 비우고, `@latest` 문서의 `버전:` 줄이 새 version인지 확인한다. (created by discussions/2026-11-17-security.md#2026-11-17-릴리스-뒤-최신-주소-갱신)
 - **11.** 임베드에서 한 묶음의 열 수와 공통 배율을 정하는 계산은 `src/web/lib/arrange.ts`에 두고, 묶음을 나누고 격자를 적용하는 DOM 코드는 `src/web/embed.ts`에 둔다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-여러-회로-배치)
+- **12.** 배치는 `src/web/lib`의 파일 여섯으로 나눈다. `drawing.ts`(그리기 요소와 겹침 검사), `symbols.ts`(소자 기호), `network.ts`(이어진 소자 묶음의 배치), `blocks.ts`(게이트·증폭기·상자), `place.ts`(묶음과 블록을 열에 놓고 선 긋기), `layout.ts`(진입점). (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-범용-회로와-2차원-배치)
+- **13.** `demo/gallery.html`은 종류별 회로를 빌드한 임베드 번들로 한 페이지에 그려 보는 정적 파일이다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-범용-회로와-2차원-배치)

@@ -1,0 +1,90 @@
+# Complete 1-bit multifunction ALU
+# Static logic + dynamic Domino carry
+input A B CI S2 S1 S0 phi
+output F SUM CO EQ
+label CI $C_{in}$
+label CO $C_{out}$
+label phi $\phi$
+label S2 $S_2$
+label S1 $S_1$
+label S0 $S_0$
+
+# Basic logic gates
+inv GNOT in=A out=NOTA
+and GAND in=A,B out=ANDAB
+or GOR in=A,B out=ORAB
+nand GNAND in=A,B out=NANDAB
+nor GNOR in=A,B out=NORAB
+
+# XOR constructed from four NAND gates
+nand X1 in=A,B out=NX1
+nand X2 in=A,NX1 out=NX2
+nand X3 in=B,NX1 out=NX3
+nand X4 in=NX2,NX3 out=XAB
+
+# XNOR
+inv GXNOR in=XAB out=XNAB
+buf BEQ in=XNAB out=EQ
+
+# Full-adder sum: XOR(A XOR B, Cin)
+nand SX1 in=XAB,CI out=SN1
+nand SX2 in=XAB,SN1 out=SN2
+nand SX3 in=CI,SN1 out=SN3
+nand SX4 in=SN2,SN3 out=SUM
+
+# Domino full-adder carry
+# CO = AB + CI * XAB
+pmos PCLK g=phi d=Y s=VDD
+
+# First evaluation branch: AB
+nmos N1 g=A d=Y s=X1N
+nmos N2 g=B d=X1N s=TAIL
+
+# Second evaluation branch: CI * XAB
+nmos N3 g=XAB d=Y s=X2N
+nmos N4 g=CI d=X2N s=TAIL
+
+# Clock evaluation transistor
+nmos NCLK g=phi d=TAIL s=GND
+
+# Internal-node charge-sharing prevention
+pmos PX1 g=phi d=X1N s=VDD
+pmos PX2 g=phi d=X2N s=VDD
+
+# Weak keeper and static output inverter
+pmos PK g=CO d=Y s=VDD
+inv ICARRY in=Y out=CO
+
+# ALU operation selection
+inv IS0 in=S0 out=S0B
+inv IS1 in=S1 out=S1B
+inv IS2 in=S2 out=S2B
+
+# 3-to-8 one-hot decoder
+and DEC0 in=S2B,S1B,S0B out=K0
+and DEC1 in=S2B,S1B,S0 out=K1
+and DEC2 in=S2B,S1,S0B out=K2
+and DEC3 in=S2B,S1,S0 out=K3
+and DEC4 in=S2,S1B,S0B out=K4
+and DEC5 in=S2,S1B,S0 out=K5
+and DEC6 in=S2,S1,S0B out=K6
+and DEC7 in=S2,S1,S0 out=K7
+
+# Select operation results
+and M0 in=K0,NOTA out=R0
+and M1 in=K1,ANDAB out=R1
+and M2 in=K2,ORAB out=R2
+and M3 in=K3,XAB out=R3
+and M4 in=K4,NANDAB out=R4
+and M5 in=K5,NORAB out=R5
+and M6 in=K6,XNAB out=R6
+and M7 in=K7,SUM out=R7
+
+# Final eight-way multiplexer
+or MUX in=R0,R1,R2,R3,R4,R5,R6,R7 out=FMUX
+buf OUTBUF in=FMUX out=F
+
+# Output loads
+cap CF a=F b=GND value=$C_F$
+cap CS a=SUM b=GND value=$C_S$
+cap CC a=CO b=GND value=$C_C$

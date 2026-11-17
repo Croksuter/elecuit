@@ -2,32 +2,26 @@
 
 import katex from "katex";
 
-import { isGate, isRail, isTransistor } from "./netlist";
-import type { Circuit, Diagnostic } from "./netlist";
+import { isBottomRail, isRail, isTopRail } from "./netlist";
+import type { Circuit, Diagnostic, Element, Terminal } from "./netlist";
 
 interface NetUse {
   line: number;
   where: string;
 }
 
+function terminalsOf(element: Element): Terminal[] {
+  if (element.type === "block") return [...element.inputs, ...element.outputs];
+  return element.control === null ? element.pins : [element.control, ...element.pins];
+}
+
 function collectNetUses(circuit: Circuit): Map<string, NetUse[]> {
   const uses = new Map<string, NetUse[]>();
-  function add(net: string, line: number, where: string): void {
-    const list = uses.get(net) ?? [];
-    list.push({ line, where });
-    uses.set(net, list);
-  }
   for (const element of circuit.elements) {
-    if (isTransistor(element)) {
-      add(element.g, element.line, `${element.name}.g`);
-      add(element.d, element.line, `${element.name}.d`);
-      add(element.s, element.line, `${element.name}.s`);
-    } else if (element.kind === "cap") {
-      add(element.a, element.line, `${element.name}.a`);
-      add(element.b, element.line, `${element.name}.b`);
-    } else {
-      for (const input of element.inputs) add(input, element.line, `${element.name}.in`);
-      add(element.output, element.line, `${element.name}.out`);
+    for (const terminal of terminalsOf(element)) {
+      const list = uses.get(terminal.net) ?? [];
+      list.push({ line: element.line, where: `${element.name}.${terminal.key}` });
+      uses.set(terminal.net, list);
     }
   }
   return uses;
@@ -53,37 +47,33 @@ function lint(circuit: Circuit): Diagnostic[] {
   }
 
   for (const element of circuit.elements) {
-    if (isTransistor(element) && element.d === element.s) {
-      warn(
-        element.line,
-        `${element.name}: 드레인과 소스가 같은 노드 ${element.d}에 묶여 있습니다.`,
-      );
+    if (element.type !== "device") continue;
+    const [first, second] = element.pins;
+    if (first.net === second.net) {
+      warn(element.line, `${element.name}: 두 단자가 같은 노드 ${first.net}에 묶여 있습니다.`);
     }
-    if (
-      isTransistor(element) &&
-      isRail(element.d) &&
-      isRail(element.s) &&
-      element.d !== element.s
-    ) {
-      warn(element.line, `${element.name}: 켜지면 VDD와 GND가 바로 이어집니다.`);
-    }
-    if (element.kind === "cap" && element.a === element.b) {
-      warn(element.line, `${element.name}: 두 단자가 같은 노드 ${element.a}에 묶여 있습니다.`);
+    const isAcrossSupply =
+      (isTopRail(first.net) && isBottomRail(second.net)) ||
+      (isBottomRail(first.net) && isTopRail(second.net));
+    if (element.control !== null && isAcrossSupply) {
+      warn(element.line, `${element.name}: 켜지면 ${first.net}와 ${second.net}가 바로 이어집니다.`);
     }
   }
 
   const drivers = new Map<string, string>();
   for (const element of circuit.elements) {
-    if (!isGate(element)) continue;
-    const previous = drivers.get(element.output);
-    if (previous) {
-      diagnostics.push({
-        line: element.line,
-        severity: "error",
-        message: `${element.name}: 출력 ${element.output}를 ${previous}도 구동합니다.`,
-      });
-    } else {
-      drivers.set(element.output, element.name);
+    if (element.type !== "block") continue;
+    for (const output of element.outputs) {
+      const previous = drivers.get(output.net);
+      if (previous) {
+        diagnostics.push({
+          line: element.line,
+          severity: "error",
+          message: `${element.name}: 출력 ${output.net}를 ${previous}도 구동합니다.`,
+        });
+      } else {
+        drivers.set(output.net, element.name);
+      }
     }
   }
 
@@ -100,11 +90,10 @@ function lint(circuit: Circuit): Diagnostic[] {
 
   const formulas = [
     ...[...circuit.labels.values()].map((label) => ({ tex: label.tex, line: label.line })),
-    ...circuit.elements.flatMap((element) =>
-      element.kind === "cap" && element.value !== null
-        ? [{ tex: element.value, line: element.line }]
-        : [],
-    ),
+    ...circuit.elements.flatMap((element) => {
+      const caption = element.type === "device" ? element.value : element.title;
+      return caption?.isTex ? [{ tex: caption.text, line: element.line }] : [];
+    }),
   ];
   for (const formula of formulas) {
     try {

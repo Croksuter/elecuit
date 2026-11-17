@@ -1,35 +1,69 @@
 // role: parses elecuit netlist text into a circuit and reports syntax errors by line.
 
-type TransistorKind = "nmos" | "pmos";
-type GateKind = "inv" | "buf" | "nand" | "nor" | "and" | "or";
+type DeviceKind =
+  | "nmos"
+  | "pmos"
+  | "npn"
+  | "pnp"
+  | "res"
+  | "cap"
+  | "ind"
+  | "switch"
+  | "diode"
+  | "zener"
+  | "led"
+  | "vsrc"
+  | "isrc";
+type BlockKind =
+  | "inv"
+  | "buf"
+  | "nand"
+  | "nor"
+  | "and"
+  | "or"
+  | "xor"
+  | "xnor"
+  | "opamp"
+  | "mux"
+  | "dff"
+  | "latch"
+  | "block";
 
-interface Transistor {
-  kind: TransistorKind;
-  name: string;
-  line: number;
-  g: string;
-  d: string;
-  s: string;
+// One connection of an element: `key` is the terminal as the netlist names it (g, a, in, …).
+interface Terminal {
+  key: string;
+  net: string;
 }
 
-interface Gate {
-  kind: GateKind;
-  name: string;
-  line: number;
-  inputs: string[];
-  output: string;
+// A value or title shown next to an element: KaTeX when written as $…$, plain text otherwise.
+interface Caption {
+  text: string;
+  isTex: boolean;
 }
 
-interface Capacitor {
-  kind: "cap";
+// Conducts between its two pins; a transistor's third terminal controls it without conducting.
+interface Device {
+  type: "device";
+  kind: DeviceKind;
   name: string;
   line: number;
-  a: string;
-  b: string;
-  value: string | null;
+  pins: [Terminal, Terminal];
+  control: Terminal | null;
+  value: Caption | null;
 }
 
-type Element = Transistor | Gate | Capacitor;
+// Reads its inputs and drives its outputs: a logic gate, an op-amp, a flip-flop or a plain box.
+interface Block {
+  type: "block";
+  kind: BlockKind;
+  name: string;
+  line: number;
+  inputs: Terminal[];
+  outputs: Terminal[];
+  title: Caption | null;
+}
+
+type Element = Device | Block;
 
 interface Circuit {
   elements: Element[];
@@ -49,24 +83,106 @@ interface ParseResult {
   diagnostics: Diagnostic[];
 }
 
-const RAILS = ["VDD", "GND"] as const;
-const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const TRANSISTOR_KINDS: TransistorKind[] = ["nmos", "pmos"];
-const GATE_KINDS: GateKind[] = ["inv", "buf", "nand", "nor", "and", "or"];
-const SINGLE_INPUT_GATES: GateKind[] = ["inv", "buf"];
-const KEYWORDS = ["input", "output", "label", "cap", ...TRANSISTOR_KINDS, ...GATE_KINDS];
-
-// TypeScript cannot narrow on a union-valued `kind` (nmos | pmos), so these guards do it once.
-function isTransistor(element: Element): element is Transistor {
-  return (TRANSISTOR_KINDS as string[]).includes(element.kind);
+interface BlockField {
+  key: string;
+  isList: boolean;
+  isRequired: boolean;
 }
 
-function isGate(element: Element): element is Gate {
-  return (GATE_KINDS as string[]).includes(element.kind);
+const TOP_RAILS = ["VDD", "VCC"];
+const BOTTOM_RAILS = ["GND", "VSS", "VEE"];
+const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+const DEVICE_TERMINALS: Record<DeviceKind, { pins: [string, string]; control: string | null }> = {
+  nmos: { pins: ["d", "s"], control: "g" },
+  pmos: { pins: ["d", "s"], control: "g" },
+  npn: { pins: ["c", "e"], control: "b" },
+  pnp: { pins: ["c", "e"], control: "b" },
+  res: { pins: ["a", "b"], control: null },
+  cap: { pins: ["a", "b"], control: null },
+  ind: { pins: ["a", "b"], control: null },
+  switch: { pins: ["a", "b"], control: null },
+  diode: { pins: ["a", "k"], control: null },
+  zener: { pins: ["a", "k"], control: null },
+  led: { pins: ["a", "k"], control: null },
+  vsrc: { pins: ["p", "n"], control: null },
+  isrc: { pins: ["p", "n"], control: null },
+};
+
+const ONE = { isList: false, isRequired: true };
+const MANY = { isList: true, isRequired: true };
+const MAYBE = { isList: false, isRequired: false };
+const GATE_FIELDS = { inputs: [{ key: "in", ...MANY }], outputs: [{ key: "out", ...ONE }] };
+const BLOCK_FIELDS: Record<BlockKind, { inputs: BlockField[]; outputs: BlockField[] }> = {
+  inv: GATE_FIELDS,
+  buf: GATE_FIELDS,
+  nand: GATE_FIELDS,
+  nor: GATE_FIELDS,
+  and: GATE_FIELDS,
+  or: GATE_FIELDS,
+  xor: GATE_FIELDS,
+  xnor: GATE_FIELDS,
+  opamp: {
+    inputs: [
+      { key: "n", ...ONE },
+      { key: "p", ...ONE },
+    ],
+    outputs: [{ key: "out", ...ONE }],
+  },
+  mux: {
+    inputs: [
+      { key: "in", ...MANY },
+      { key: "sel", ...MANY },
+    ],
+    outputs: [{ key: "out", ...ONE }],
+  },
+  dff: {
+    inputs: [
+      { key: "d", ...ONE },
+      { key: "clk", ...ONE },
+      { key: "set", ...MAYBE },
+      { key: "rst", ...MAYBE },
+    ],
+    outputs: [
+      { key: "q", ...ONE },
+      { key: "qb", ...MAYBE },
+    ],
+  },
+  latch: {
+    inputs: [
+      { key: "d", ...ONE },
+      { key: "en", ...ONE },
+    ],
+    outputs: [
+      { key: "q", ...ONE },
+      { key: "qb", ...MAYBE },
+    ],
+  },
+  block: {
+    inputs: [{ key: "in", isList: true, isRequired: false }],
+    outputs: [{ key: "out", isList: true, isRequired: false }],
+  },
+};
+const SINGLE_INPUT_GATES: BlockKind[] = ["inv", "buf"];
+const MULTI_INPUT_GATES: BlockKind[] = ["nand", "nor", "and", "or", "xor", "xnor", "mux"];
+const KEYWORDS = [
+  "input",
+  "output",
+  "label",
+  ...Object.keys(DEVICE_TERMINALS),
+  ...Object.keys(BLOCK_FIELDS),
+];
+
+function isTopRail(net: string): boolean {
+  return TOP_RAILS.includes(net);
+}
+
+function isBottomRail(net: string): boolean {
+  return BOTTOM_RAILS.includes(net);
 }
 
 function isRail(net: string): boolean {
-  return (RAILS as readonly string[]).includes(net);
+  return isTopRail(net) || isBottomRail(net);
 }
 
 // Splits a line on whitespace, keeping `$…$` spans (and `key=$…$`) as one token.
@@ -187,6 +303,22 @@ function parse(text: string): ParseResult {
     return isValid ? fields : null;
   }
 
+  // Reads an optional `value=`/`title=` field. Returns undefined (after reporting) when malformed.
+  function readCaption(
+    line: number,
+    elementName: string,
+    key: string,
+    raw: string | undefined,
+  ): Caption | null | undefined {
+    if (raw === undefined) return null;
+    if (/^\$[^$]+\$$/.test(raw)) return { text: raw.slice(1, -1), isTex: true };
+    if (raw.includes("$")) {
+      error(line, `${elementName}: ${key}의 수식은 $…$로 감싸야 합니다.`);
+      return undefined;
+    }
+    return { text: raw, isTex: false };
+  }
+
   for (const source of selectSourceLines(text)) {
     const { line } = source;
     const { tokens, isMathOpen } = tokenize(stripComment(source.text));
@@ -253,74 +385,84 @@ function parse(text: string): ParseResult {
     }
     names.set(name, line);
 
-    if ((TRANSISTOR_KINDS as string[]).includes(keyword)) {
-      const fields = readFields(line, name, fieldTokens, ["g", "d", "s"], []);
+    if (keyword in DEVICE_TERMINALS) {
+      const kind = keyword as DeviceKind;
+      const spec = DEVICE_TERMINALS[kind];
+      const required = spec.control === null ? spec.pins : [spec.control, ...spec.pins];
+      const fields = readFields(line, name, fieldTokens, required, ["value"]);
       if (fields === null) continue;
-      const g = readNet(line, fields.get("g")!, `${name}.g`);
-      const d = readNet(line, fields.get("d")!, `${name}.d`);
-      const s = readNet(line, fields.get("s")!, `${name}.s`);
-      if (g === null || d === null || s === null) continue;
-      circuit.elements.push({ kind: keyword as TransistorKind, name, line, g, d, s });
+      const nets = required.map((key) => readNet(line, fields.get(key)!, `${name}.${key}`));
+      const value = readCaption(line, name, "value", fields.get("value"));
+      if (nets.includes(null) || value === undefined) continue;
+      const terminals = required.map((key, index) => ({ key, net: nets[index]! }));
+      circuit.elements.push({
+        type: "device",
+        kind,
+        name,
+        line,
+        pins: terminals.slice(-2) as [Terminal, Terminal],
+        control: spec.control === null ? null : terminals[0],
+        value,
+      });
       continue;
     }
 
-    if ((GATE_KINDS as string[]).includes(keyword)) {
-      const kind = keyword as GateKind;
-      const fields = readFields(line, name, fieldTokens, ["in", "out"], []);
-      if (fields === null) continue;
-      const rawInputs = fields.get("in")!.split(",");
-      const isSingle = SINGLE_INPUT_GATES.includes(kind);
-      if (isSingle && rawInputs.length !== 1) {
-        error(line, `${name}: ${kind}는 입력이 하나입니다.`);
-        continue;
-      }
-      if (!isSingle && rawInputs.length < 2) {
-        error(line, `${name}: ${kind}는 입력이 둘 이상입니다 (in=A,B).`);
-        continue;
-      }
-      const inputs = rawInputs.map((value) => readNet(line, value, `${name}.in`));
-      const output = readNet(line, fields.get("out")!, `${name}.out`);
-      if (inputs.includes(null) || output === null) continue;
-      if (isRail(output)) {
-        error(line, `${name}: 출력을 ${output}에 연결할 수 없습니다.`);
-        continue;
-      }
-      circuit.elements.push({ kind, name, line, inputs: inputs as string[], output });
-      continue;
-    }
-
-    const fields = readFields(line, name, fieldTokens, ["a", "b"], ["value"]);
-    if (fields === null) continue;
-    const a = readNet(line, fields.get("a")!, `${name}.a`);
-    const b = readNet(line, fields.get("b")!, `${name}.b`);
-    if (a === null || b === null) continue;
-    const rawValue = fields.get("value");
-    if (rawValue !== undefined && !/^\$[^$]+\$$/.test(rawValue)) {
-      error(line, `${name}: value는 $…$로 감싼 KaTeX 수식이어야 합니다.`);
-      continue;
-    }
-    circuit.elements.push({
-      kind: "cap",
-      name,
+    const kind = keyword as BlockKind;
+    const spec = BLOCK_FIELDS[kind];
+    const all = [...spec.inputs, ...spec.outputs];
+    const fields = readFields(
       line,
-      a,
-      b,
-      value: rawValue === undefined ? null : rawValue.slice(1, -1),
-    });
+      name,
+      fieldTokens,
+      all.filter((field) => field.isRequired).map((field) => field.key),
+      [...all.filter((field) => !field.isRequired).map((field) => field.key), "title"],
+    );
+    if (fields === null) continue;
+    let isValid = true;
+    function readTerminals(group: BlockField[]): Terminal[] {
+      return group.flatMap((field) => {
+        const raw = fields!.get(field.key);
+        if (raw === undefined) return [];
+        const values = raw.split(",");
+        if (!field.isList && values.length !== 1) {
+          error(line, `${name}: 단자 ${field.key}에는 노드 하나만 씁니다.`);
+          isValid = false;
+          return [];
+        }
+        return values.flatMap((value) => {
+          const net = readNet(line, value, `${name}.${field.key}`);
+          if (net === null) isValid = false;
+          return net === null ? [] : [{ key: field.key, net }];
+        });
+      });
+    }
+    const inputs = readTerminals(spec.inputs);
+    const outputs = readTerminals(spec.outputs);
+    const title = readCaption(line, name, "title", fields.get("title"));
+    if (!isValid || title === undefined) continue;
+    const gateInputs = inputs.filter((terminal) => terminal.key === "in").length;
+    if (SINGLE_INPUT_GATES.includes(kind) && gateInputs !== 1) {
+      error(line, `${name}: ${kind}는 입력이 하나입니다.`);
+      continue;
+    }
+    if (MULTI_INPUT_GATES.includes(kind) && gateInputs < 2) {
+      error(line, `${name}: ${kind}는 입력이 둘 이상입니다 (in=A,B).`);
+      continue;
+    }
+    if (inputs.length + outputs.length === 0) {
+      error(line, `${name}: in이나 out에 노드가 하나는 있어야 합니다.`);
+      continue;
+    }
+    const railOutput = outputs.find((terminal) => isRail(terminal.net));
+    if (railOutput) {
+      error(line, `${name}: 출력을 ${railOutput.net}에 연결할 수 없습니다.`);
+      continue;
+    }
+    circuit.elements.push({ type: "block", kind, name, line, inputs, outputs, title });
   }
 
   return { circuit, diagnostics };
 }
 
-export type {
-  Capacitor,
-  Circuit,
-  Diagnostic,
-  Element,
-  Gate,
-  GateKind,
-  ParseResult,
-  Transistor,
-  TransistorKind,
-};
-export { GATE_KINDS, isGate, isRail, isTransistor, parse, RAILS };
+export type { Block, Caption, Circuit, Device, DeviceKind, Diagnostic, Element, Terminal };
+export { isBottomRail, isRail, isTopRail, parse };

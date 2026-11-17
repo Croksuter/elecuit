@@ -1,6 +1,6 @@
 # elecuit 회로도 지침
 
-버전: 0.2.0
+버전: 0.3.0
 최신 문서: https://cdn.jsdelivr.net/gh/Croksuter/elecuit@latest/dist/prompt.md
 
 사용자가 이 문서의 주소를 주면서 회로도를 그리라고 하면, 그 대화가 끝날 때까지 아래 지침을 따릅니다.
@@ -32,7 +32,7 @@ nmos N3 g=phi d=n1 s=GND
 pmos P2 g=phi d=X  s=VDD
 inv  I1 in=Y  out=Z
 </script>
-<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.2.0/dist/elecuit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.3.0/dist/elecuit.js"></script>
 </body>
 ```
 
@@ -46,17 +46,28 @@ inv  I1 in=Y  out=Z
 netlist 규칙
 - 한 줄에 소자 하나: 종류 이름 단자=노드 …
 - 연결은 노드 이름이 같은지로만 정해집니다. 같은 노드는 철자와 대소문자까지 똑같이 씁니다.
-- VDD는 전원, GND는 접지로 예약된 이름입니다.
+- 예약된 이름: VDD·VCC는 양의 전원, GND는 접지, VSS·VEE는 음의 전원입니다.
 - 노드와 소자 이름은 영문자·숫자·밑줄만 씁니다 (예: phi, n1, CLK_b).
 - 화면에 보일 이름을 수식으로 바꾸려면 label 노드 $KaTeX$ 를 씁니다 (예: label phi $\phi$, label CLK_b $\overline{CLK}$).
 - 주석은 # 뒤에 씁니다.
+- 배치와 배선은 elecuit이 정합니다. 위치, 방향, 그리는 순서는 쓰지 않습니다.
 
-소자
-- nmos 이름 g=게이트 d=드레인 s=소스
-- pmos 이름 g=게이트 d=드레인 s=소스
-- inv 이름 in=입력 out=출력 (buf도 같음)
-- nand 이름 in=A,B[,C…] out=출력 (nor, and, or도 같음)
-- cap 이름 a=노드 b=노드 [value=$C_L$]
+소자 (두 단자 사이로 전류가 흐름). 모든 소자에 value=$10\,\mathrm{k}\Omega$ 처럼 값을 붙일 수 있습니다.
+- res | cap | ind | switch 이름 a=노드 b=노드
+- diode | zener | led 이름 a=애노드 k=캐소드
+- vsrc 이름 p=양극 n=음극
+- isrc 이름 p=노드 n=노드 (전류는 소자 안에서 p에서 n으로 흐름)
+- nmos | pmos 이름 g=게이트 d=드레인 s=소스
+- npn | pnp 이름 b=베이스 c=컬렉터 e=이미터
+
+블록 (입력을 받아 출력을 구동)
+- inv | buf 이름 in=입력 out=출력
+- nand | nor | and | or | xor | xnor 이름 in=A,B[,C…] out=출력
+- opamp 이름 p=비반전입력 n=반전입력 out=출력
+- mux 이름 in=D0,D1[,…] sel=S[,…] out=출력
+- dff 이름 d=입력 clk=클록 q=출력 [qb=반전출력] [set=노드] [rst=노드]
+- latch 이름 d=입력 en=인에이블 q=출력 [qb=반전출력]
+- block 이름 in=A,B out=X,Y [title=$\text{ADC}$] (위에 없는 부품은 이름 붙인 상자로 씁니다)
 
 선언
 - input A B …   외부 입력

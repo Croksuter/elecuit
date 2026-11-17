@@ -11,8 +11,11 @@ const MAX_SCALE = 1.25;
 // Below this, net labels get too small to read; the group then takes fewer columns instead.
 const MIN_SHARED_SCALE = 0.7;
 
+// A schematic too wide for the row even alone stops shrinking here and scrolls instead.
+const MIN_SCALE = 0.6;
+
 // `widths` are the unscaled widths in reading order, `available` the width of the row and `gap`
-// the space between columns. A group left with one column shrinks as far as the row needs.
+// the space between columns.
 function arrange(widths: number[], available: number, gap: number): Arrangement {
   if (widths.length === 0) throw new Error("arrange: a group holds at least one schematic");
   if (widths.some((width) => !(width > 0))) throw new Error("arrange: widths must be positive");
@@ -30,7 +33,7 @@ function arrange(widths: number[], available: number, gap: number): Arrangement 
 
   let columns = widths.length;
   while (columns > 1 && fitScale(columns) < MIN_SHARED_SCALE) columns -= 1;
-  const scale = Math.min(MAX_SCALE, fitScale(columns));
+  const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, fitScale(columns)));
   return { scale, columnWidths: columnMaxima(columns).map((width) => width * scale) };
 }
 

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>elecuit gallery</title>
+  </head>
+  <body style="margin: 24px; font-family: system-ui">
+    <script type="text/elecuit" title="1-bit ALU (게이트 46개와 domino carry)">
+# Complete 1-bit multifunction ALU
+# Static logic + dynamic Domino carry
+input A B CI S2 S1 S0 phi
+output F SUM CO EQ
+label CI $C_{in}$
+label CO $C_{out}$
+label phi $\phi$
+label S2 $S_2$
+label S1 $S_1$
+label S0 $S_0$
+
+# Basic logic gates
+inv GNOT in=A out=NOTA
+and GAND in=A,B out=ANDAB
+or GOR in=A,B out=ORAB
+nand GNAND in=A,B out=NANDAB
+nor GNOR in=A,B out=NORAB
+
+# XOR constructed from four NAND gates
+nand X1 in=A,B out=NX1
+nand X2 in=A,NX1 out=NX2
+nand X3 in=B,NX1 out=NX3
+nand X4 in=NX2,NX3 out=XAB
+
+# XNOR
+inv GXNOR in=XAB out=XNAB
+buf BEQ in=XNAB out=EQ
+
+# Full-adder sum: XOR(A XOR B, Cin)
+nand SX1 in=XAB,CI out=SN1
+nand SX2 in=XAB,SN1 out=SN2
+nand SX3 in=CI,SN1 out=SN3
+nand SX4 in=SN2,SN3 out=SUM
+
+# Domino full-adder carry
+# CO = AB + CI * XAB
+pmos PCLK g=phi d=Y s=VDD
+
+# First evaluation branch: AB
+nmos N1 g=A d=Y s=X1N
+nmos N2 g=B d=X1N s=TAIL
+
+# Second evaluation branch: CI * XAB
+nmos N3 g=XAB d=Y s=X2N
+nmos N4 g=CI d=X2N s=TAIL
+
+# Clock evaluation transistor
+nmos NCLK g=phi d=TAIL s=GND
+
+# Internal-node charge-sharing prevention
+pmos PX1 g=phi d=X1N s=VDD
+pmos PX2 g=phi d=X2N s=VDD
+
+# Weak keeper and static output inverter
+pmos PK g=CO d=Y s=VDD
+inv ICARRY in=Y out=CO
+
+# ALU operation selection
+inv IS0 in=S0 out=S0B
+inv IS1 in=S1 out=S1B
+inv IS2 in=S2 out=S2B
+
+# 3-to-8 one-hot decoder
+and DEC0 in=S2B,S1B,S0B out=K0
+and DEC1 in=S2B,S1B,S0 out=K1
+and DEC2 in=S2B,S1,S0B out=K2
+and DEC3 in=S2B,S1,S0 out=K3
+and DEC4 in=S2,S1B,S0B out=K4
+and DEC5 in=S2,S1B,S0 out=K5
+and DEC6 in=S2,S1,S0B out=K6
+and DEC7 in=S2,S1,S0 out=K7
+
+# Select operation results
+and M0 in=K0,NOTA out=R0
+and M1 in=K1,ANDAB out=R1
+and M2 in=K2,ORAB out=R2
+and M3 in=K3,XAB out=R3
+and M4 in=K4,NANDAB out=R4
+and M5 in=K5,NORAB out=R5
+and M6 in=K6,XNAB out=R6
+and M7 in=K7,SUM out=R7
+
+# Final eight-way multiplexer
+or MUX in=R0,R1,R2,R3,R4,R5,R6,R7 out=FMUX
+buf OUTBUF in=FMUX out=F
+
+# Output loads
+cap CF a=F b=GND value=$C_F$
+cap CS a=SUM b=GND value=$C_S$
+cap CC a=CO b=GND value=$C_C$
+</script>
+    <hr />
+    <script type="text/elecuit" title="공통 이미터 증폭기">
+res R1 a=VCC b=base value=$R_1$
+res R2 a=base b=GND value=$R_2$
+res RC a=VCC b=col value=$R_C$
+res RE a=emit b=GND value=$R_E$
+cap CE a=emit b=GND value=$C_E$
+npn Q1 b=base c=col e=emit
+cap Cin a=in b=base
+vsrc Vin p=in n=GND value=$v_{in}$
+cap Cout a=col b=out
+res RL a=out b=GND value=$R_L$
+</script>
+    <hr />
+    <script type="text/elecuit" title="RLC 저역 통과">
+vsrc V1 p=in n=GND value=$v_s$
+res R1 a=in b=n1 value=$R$
+ind L1 a=n1 b=out value=$L$
+cap C1 a=out b=GND value=$C$
+</script>
+    <hr />
+    <script type="text/elecuit" title="휘트스톤 브리지">
+vsrc V1 p=top n=GND
+res R1 a=top b=l
+res R2 a=top b=r
+res R3 a=l b=GND
+res R4 a=r b=GND
+res R5 a=l b=r
+</script>
+    <hr />
+    <script type="text/elecuit" title="브리지 정류기">
+vsrc Vs p=p n=n value=$v_s$
+diode D1 a=p k=o
+diode D2 a=n k=o
+diode D3 a=GND k=p
+diode D4 a=GND k=n
+res RL a=o b=GND
+cap CL a=o b=GND
+</script>
+    <hr />
+    <script type="text/elecuit" title="전송 게이트와 DRAM 셀">
+nmos TN g=EN d=A s=B
+pmos TP g=ENB d=A s=B
+nmos MA g=WL d=BL s=store
+cap CS a=store b=GND value=$C_S$
+</script>
+    <hr />
+    <script type="text/elecuit" title="전류 미러와 반전 증폭기">
+isrc IREF p=VDD n=ref value=$I_{ref}$
+nmos M1 g=ref d=ref s=GND
+nmos M2 g=ref d=out s=GND
+res RL a=VDD b=out
+res RI a=vin b=minus value=$R_1$
+res RF a=minus b=vout value=$R_2$
+opamp U1 p=GND n=minus out=vout
+</script>
+    <hr />
+    <script type="text/elecuit" title="플립플롭, MUX, 래치 루프, 그 밖의 소자">
+mux MX in=D0,D1 sel=S out=d
+dff FF d=d clk=CLK q=Q qb=QB
+nor G1 in=R,QN out=QL
+nor G2 in=S2,QL out=QN
+xor G3 in=Q,QL out=E
+block ADC in=E out=b0,b1 title=$\text{ADC}$
+led D1 a=b0 k=k1
+res R1 a=k1 b=GND value=330
+zener Z1 a=GND k=b1
+switch S1 a=VCC b=S2
+pnp Q2 b=b1 c=VEE e=VCC
+</script>
+    <hr />
+    <script type="text/elecuit" title="domino 게이트 (기존 예제)">
+input  A B phi
+output Z
+label  phi $\phi$
+pmos P1 g=phi d=Y  s=VDD
+nmos N1 g=A   d=Y  s=X
+nmos N2 g=B   d=X  s=n1
+nmos N3 g=phi d=n1 s=GND
+pmos P2 g=phi d=X  s=VDD
+inv  I1 in=Y  out=Z
+</script>
+    <hr />
+    <script src="../dist/elecuit.js"></script>
+  </body>
+</html>
