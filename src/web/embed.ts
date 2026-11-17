@@ -7,7 +7,14 @@ import { arrange } from "./lib/arrange";
 import type { NetUse } from "./lib/lint";
 import { renderTitle } from "./lib/render";
 import schematicStyles from "./schematic.css?inline";
-import { createMeasurer, describeNet, drawSchematic, onFontsLoaded, watchNets } from "./schematic";
+import {
+  createLogic,
+  createMeasurer,
+  describeNet,
+  drawSchematic,
+  onFontsLoaded,
+  watchNets,
+} from "./schematic";
 import type { LabelMeasurer } from "./schematic";
 
 interface Figure {
@@ -19,6 +26,8 @@ interface Figure {
 const BLOCK_SELECTOR = 'script[type="text/elecuit"]';
 const KATEX_STYLES = `https://cdn.jsdelivr.net/npm/katex@${katex.version}/dist/katex.min.css`;
 const HOVER_HINT = "노드에 마우스를 올리면 연결된 단자가 보입니다.";
+const INPUT_HINT =
+  "점선으로 두른 입력을 누르면 0 → 1 → 해제 순으로 바뀌고, 회로의 값이 따라 바뀝니다.";
 const GROUP_GAP = 20;
 // Left and right padding of `.elecuit-viewport` together; each figure is this much wider than
 // its scaled sheet.
@@ -66,8 +75,13 @@ function createFigure(
   diagnosticsList.className = "elecuit-diagnostics";
   const info = document.createElement("div");
   info.className = "elecuit-info";
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.className = "elecuit-reset";
+  reset.textContent = "값 지우기";
+  reset.hidden = true;
   viewport.append(stage);
-  element.append(viewport, diagnosticsList, info);
+  element.append(viewport, diagnosticsList, info, reset);
   const title = block.getAttribute("title");
   if (title) {
     const caption = document.createElement("figcaption");
@@ -77,6 +91,18 @@ function createFigure(
   }
 
   let netUses = new Map<string, NetUse[]>();
+  let hovered: string | null = null;
+
+  function showInfo(): void {
+    if (stage.childElementCount === 0) info.textContent = "";
+    else if (hovered === null) info.textContent = logic.hasInputs() ? INPUT_HINT : HOVER_HINT;
+    else {
+      const about = [describeNet(hovered, netUses.get(hovered) ?? []), logic.describe(hovered)];
+      info.textContent = about.filter(Boolean).join(" · ");
+    }
+  }
+  const logic = createLogic(stage, showInfo);
+  reset.addEventListener("click", () => logic.reset());
 
   function redraw(): void {
     const schematic = drawSchematic(stage, text, measurer.measure);
@@ -100,11 +126,14 @@ function createFigure(
         return item;
       }),
     );
-    info.textContent = schematic.hasElements ? HOVER_HINT : "";
+    logic.load(schematic.circuit, text);
+    reset.hidden = !logic.hasInputs();
+    showInfo();
   }
 
   watchNets(stage, (net) => {
-    info.textContent = net === null ? HOVER_HINT : describeNet(net, netUses.get(net) ?? []);
+    hovered = net;
+    showInfo();
   });
   return { element, stage, redraw };
 }

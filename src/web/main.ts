@@ -11,6 +11,7 @@ import type { Diagnostic } from "./lib/netlist";
 import { canvasPrompt, EMBED_SCRIPT_URL, EXAMPLE, PROMPT } from "./lib/prompt";
 import {
   createMeasurer,
+  createLogic,
   describeNet,
   drawSchematic,
   highlightNet,
@@ -41,6 +42,8 @@ const zoomValue = element<HTMLSpanElement>("zoom-value");
 const toast = element<HTMLDivElement>("toast");
 
 const HOVER_HINT = "노드에 마우스를 올리면 연결된 단자가 보입니다.";
+const INPUT_HINT =
+  "점선으로 두른 입력을 누르면 0 → 1 → 해제 순으로 바뀌고, 회로의 값이 따라 바뀝니다.";
 const measurer = createMeasurer();
 
 function loadSource(): string {
@@ -62,6 +65,9 @@ function saveSource(text: string): void {
 let zoom = 1;
 let isFitting = true;
 let netUses = new Map<string, NetUse[]>();
+let hovered: string | null = null;
+const resetLogic = element<HTMLButtonElement>("reset-logic");
+const logic = createLogic(stage, () => showNet(hovered));
 let toastTimer = 0;
 
 function showToast(message: string): void {
@@ -140,7 +146,9 @@ function update(): void {
   empty.hidden = schematic.hasElements;
   stage.hidden = !schematic.hasElements;
   notesView.textContent = schematic.notes.join(" ");
-  hoverInfo.textContent = HOVER_HINT;
+  logic.load(schematic.circuit, text);
+  resetLogic.hidden = !logic.hasInputs();
+  showNet(null);
   applyZoom();
 }
 
@@ -154,7 +162,12 @@ function selectLine(line: number): void {
 }
 
 function showNet(net: string | null): void {
-  hoverInfo.textContent = net === null ? HOVER_HINT : describeNet(net, netUses.get(net) ?? []);
+  hovered = net;
+  if (net === null) hoverInfo.textContent = logic.hasInputs() ? INPUT_HINT : HOVER_HINT;
+  else {
+    const about = [describeNet(net, netUses.get(net) ?? []), logic.describe(net)];
+    hoverInfo.textContent = about.filter(Boolean).join(" · ");
+  }
 }
 
 async function copyText(text: string, message: string): Promise<void> {
@@ -236,6 +249,7 @@ element("zoom-fit").addEventListener("click", () => {
   applyZoom();
 });
 element("save-svg").addEventListener("click", () => void exportSheet("svg"));
+resetLogic.addEventListener("click", () => logic.reset());
 element("save-png").addEventListener("click", () => void exportSheet("png"));
 for (const id of ["copy-prompt", "empty-prompt"]) {
   element(id).addEventListener(

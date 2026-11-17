@@ -22,7 +22,8 @@ interface LabelPrimitive {
 type Primitive =
   | { type: "wire"; net: string; points: Point[] }
   | { type: "dot"; net: string; x: number; y: number }
-  | { type: "shape"; d: string; isHeavy: boolean }
+  // `device` names the element a shape belongs to when the shape shows that element's state.
+  | { type: "shape"; d: string; isHeavy: boolean; device: string | null }
   | { type: "circle"; x: number; y: number; r: number }
   | LabelPrimitive;
 
@@ -83,13 +84,21 @@ class Sketch {
   }
 
   // A stroke through the points, straight from one to the next.
-  stroke(points: Point[], options: { isHeavy?: boolean; isClosed?: boolean } = {}): void {
+  stroke(
+    points: Point[],
+    options: { isHeavy?: boolean; isClosed?: boolean; device?: string } = {},
+  ): void {
     const d = points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x} ${y}`).join("");
-    this.shape(options.isClosed ? `${d}Z` : d, options.isHeavy ?? false);
+    this.primitives.push({
+      type: "shape",
+      d: options.isClosed ? `${d}Z` : d,
+      isHeavy: options.isHeavy ?? false,
+      device: options.device ?? null,
+    });
   }
 
-  shape(d: string, isHeavy = false): void {
-    this.primitives.push({ type: "shape", d, isHeavy });
+  shape(d: string): void {
+    this.primitives.push({ type: "shape", d, isHeavy: false, device: null });
   }
 
   circle([x, y]: Point, r: number): void {

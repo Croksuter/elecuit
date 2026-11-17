@@ -4,6 +4,9 @@
   --paper-ink: #1b1f24;
   --paper-muted: #7a8494;
   --paper-accent: #2459d6;
+  --level-high: #d9480f;
+  --level-low: #1971c2;
+  --device-on: #2b8a3e;
   position: relative;
 }
 
@@ -110,6 +113,60 @@
 .stage .label.on {
   opacity: 1;
   color: var(--paper-accent);
+}
+
+/* Logic levels: a net at 1 or 0 takes that level's colour, and its name carries the digit. */
+.stage .wire[data-level="1"],
+.stage .dot[data-level="1"] {
+  stroke: var(--level-high);
+  fill: var(--level-high);
+}
+
+.stage .wire[data-level="0"],
+.stage .dot[data-level="0"] {
+  stroke: var(--level-low);
+  fill: var(--level-low);
+}
+
+.stage .wire[data-level] {
+  fill: none;
+}
+
+.stage .label[data-level="1"] {
+  color: var(--level-high);
+}
+
+.stage .label[data-level="0"] {
+  color: var(--level-low);
+}
+
+.label[data-level]::after {
+  content: attr(data-level);
+  margin-left: 2px;
+  font:
+    600 10px system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  vertical-align: super;
+}
+
+.stage .settable {
+  cursor: pointer;
+}
+
+.label.settable {
+  outline: 1px dashed var(--paper-muted);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.sheet .body[data-state="on"] {
+  stroke: var(--device-on);
+}
+
+.sheet .body[data-state="off"] {
+  opacity: 0.3;
 }
 
 .measure {

@@ -65,7 +65,7 @@ function drawDevice(
   if (kind === "nmos" || kind === "pmos") {
     sketch.wire(first.net, frame(0, 0), frame(14, 0), frame(14, -12));
     sketch.wire(second.net, frame(50, -12), frame(50, 0), frame(end, 0));
-    sketch.stroke([frame(10, -12), frame(54, -12)], { isHeavy: true });
+    sketch.stroke([frame(10, -12), frame(54, -12)], { isHeavy: true, device: device.name });
     sketch.stroke([frame(14, -20), frame(50, -20)]);
     if (kind === "pmos") sketch.circle(frame(32, -24), 3.5);
     sketch.wire(device.control!.net, frame(32, kind === "pmos" ? -27.5 : -20), frame(32, -reach));
