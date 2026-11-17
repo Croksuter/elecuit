@@ -1,3 +1,5 @@
 node_modules/
-dist/
 .tmp/
+# The embed bundle is tracked because jsDelivr serves it straight from this repository.
+dist/*
+!dist/elecuit.js

@@ -19,7 +19,14 @@
 - **값.** `docs/contracts/testing.md`.
 - **갱신.** 테스트 명령이나 배치를 바꾸면 같은 변경에서 이 문서를 고친다.
 
+## Security
+
+- **Rules.** 전역 `SECURITY`와 `hy-security`를 따른다.
+- **Values.** `docs/contracts/security.md`가 등급·경계·통제·수용한 위험·재점검 값을 담고, 검사 명령은 `docs/contracts/testing.md`에 둔다.
+- **Upkeep.** 경계나 통제가 바뀌면 같은 변경에서 값 문서를 갱신한다.
+
 ## 문서
 
-- **값.** `docs/contracts/code.md`, `docs/contracts/testing.md`: 코드나 테스트를 바꿀 때 읽는다.
+- **값.** `docs/contracts/code.md`, `docs/contracts/testing.md`: 코드나 테스트를 바꿀 때 읽는다. `docs/contracts/security.md`: 배포 경로, 외부에서 불러오는 자원, 입력 처리를 바꿀 때 읽는다.
 - **논의.** `docs/discussions/`: 결정의 이유를 찾을 때 읽는다.
+- **보고.** `docs/reports/`: 그 시점에 확인한 내용(보안 점검)을 찾을 때 읽는다.

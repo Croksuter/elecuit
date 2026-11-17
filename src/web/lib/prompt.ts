@@ -12,6 +12,9 @@ pmos P2 g=phi d=X  s=VDD
 inv  I1 in=Y  out=Z
 `;
 
+// jsDelivr serves the tracked bundle from the GitHub repository; `@0.1` follows 0.1.x tags.
+const EMBED_SCRIPT_URL = "https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.1/dist/elecuit.js";
+
 const GRAMMAR = `netlist 규칙
 - 한 줄에 소자 하나: 종류 이름 단자=노드 …
 - 연결은 노드 이름이 같은지로만 정해집니다. 같은 노드는 철자와 대소문자까지 똑같이 씁니다.
@@ -67,4 +70,4 @@ ${EXAMPLE}</script>
 ${GRAMMAR}`;
 }
 
-export { canvasPrompt, EXAMPLE, PROMPT };
+export { canvasPrompt, EMBED_SCRIPT_URL, EXAMPLE, PROMPT };

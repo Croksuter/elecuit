@@ -16,10 +16,17 @@
         <button
           type="button"
           id="copy-prompt"
-          class="primary"
-          title="GPT에 먼저 붙여 넣으면 답을 이 형식으로 받습니다"
+          title="GPT에 먼저 붙여 넣으면 답을 netlist로 받습니다. 그 답을 이 페이지에 붙여 넣습니다."
         >
-          GPT용 프롬프트 복사
+          붙여넣기용 프롬프트 복사
+        </button>
+        <button
+          type="button"
+          id="copy-canvas-prompt"
+          class="primary"
+          title="Custom GPT 지침에 넣으면 GPT가 Canvas 미리보기에 회로도를 바로 띄웁니다."
+        >
+          Canvas용 지침 복사
         </button>
       </div>
     </header>
@@ -84,7 +91,9 @@
             <p>netlist를 넣으면 여기에 회로도가 그려집니다.</p>
             <div class="empty-actions">
               <button type="button" id="empty-example">예제 불러오기</button>
-              <button type="button" id="empty-prompt" class="primary">GPT용 프롬프트 복사</button>
+              <button type="button" id="empty-prompt" class="primary">
+                붙여넣기용 프롬프트 복사
+              </button>
             </div>
           </div>
         </div>

@@ -8,7 +8,7 @@ import { toPng, toSvg } from "html-to-image";
 
 import type { NetUse } from "./lib/lint";
 import type { Diagnostic } from "./lib/netlist";
-import { EXAMPLE, PROMPT } from "./lib/prompt";
+import { canvasPrompt, EMBED_SCRIPT_URL, EXAMPLE, PROMPT } from "./lib/prompt";
 import {
   createMeasurer,
   describeNet,
@@ -243,6 +243,14 @@ for (const id of ["copy-prompt", "empty-prompt"]) {
     () => void copyText(PROMPT, "프롬프트를 복사했습니다. GPT 대화 첫 메시지로 붙여 넣으세요."),
   );
 }
+element("copy-canvas-prompt").addEventListener(
+  "click",
+  () =>
+    void copyText(
+      canvasPrompt(EMBED_SCRIPT_URL),
+      "지침을 복사했습니다. Custom GPT의 지침에 붙여 넣으세요.",
+    ),
+);
 for (const id of ["load-example", "empty-example"])
   element(id).addEventListener("click", loadExample);
 new ResizeObserver(() => applyZoom()).observe(canvas);
