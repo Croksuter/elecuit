@@ -1,4 +1,4 @@
-// role: draws a netlist into a stage element in the browser: label measuring, rendering, net hover, logic levels.
+// role: draws a netlist into a stage element in the browser: label measuring, rendering, net hover, logic levels, zoom gestures.
 
 import { layout } from "./lib/layout";
 import type { LabelKind, Measure } from "./lib/drawing";
@@ -188,6 +188,65 @@ function createLogic(stage: HTMLElement, onChange: () => void): Logic {
   };
 }
 
+// Reports zoom gestures made over `target` and keeps the browser from zooming the page instead:
+// Ctrl or ⌘ with the wheel (a trackpad pinch arrives as this), Safari's pinch gesture, and two
+// fingers on a touch screen. `factor` multiplies the current zoom; the point is where to hold still.
+function watchZoom(
+  target: HTMLElement,
+  onZoom: (factor: number, clientX: number, clientY: number) => void,
+): void {
+  target.addEventListener(
+    "wheel",
+    (event) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      // A mouse wheel reports far larger steps than a pinch; both end up as gentle steps.
+      const delta =
+        event.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? event.deltaY : event.deltaY * 16;
+      onZoom(Math.exp(-Math.max(-30, Math.min(30, delta)) * 0.01), event.clientX, event.clientY);
+    },
+    { passive: false },
+  );
+
+  // Safari reports a trackpad pinch as gesture events with the scale since the gesture began.
+  let gestureScale = 1;
+  target.addEventListener("gesturestart", (event) => {
+    event.preventDefault();
+    gestureScale = 1;
+  });
+  target.addEventListener("gesturechange", (event) => {
+    event.preventDefault();
+    const gesture = event as Event & { scale: number; clientX: number; clientY: number };
+    onZoom(gesture.scale / gestureScale, gesture.clientX, gesture.clientY);
+    gestureScale = gesture.scale;
+  });
+
+  const touches = new Map<number, { x: number; y: number }>();
+  function spread(): { distance: number; x: number; y: number } {
+    const [first, second] = [...touches.values()];
+    return {
+      distance: Math.hypot(first.x - second.x, first.y - second.y),
+      x: (first.x + second.x) / 2,
+      y: (first.y + second.y) / 2,
+    };
+  }
+  target.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "touch")
+      touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  });
+  target.addEventListener("pointermove", (event) => {
+    if (!touches.has(event.pointerId)) return;
+    const before = touches.size === 2 ? spread() : null;
+    touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (before === null || before.distance === 0) return;
+    const after = spread();
+    onZoom(after.distance / before.distance, after.x, after.y);
+  });
+  for (const type of ["pointerup", "pointercancel", "pointerleave"] as const) {
+    target.addEventListener(type, (event) => touches.delete(event.pointerId));
+  }
+}
+
 // KaTeX fonts arrive after the first render; label widths measured before that are too narrow.
 function onFontsLoaded(callback: () => void): void {
   document.fonts.addEventListener("loadingdone", callback);
@@ -202,4 +261,5 @@ export {
   highlightNet,
   onFontsLoaded,
   watchNets,
+  watchZoom,
 };

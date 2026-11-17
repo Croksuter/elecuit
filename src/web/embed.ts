@@ -14,12 +14,16 @@ import {
   drawSchematic,
   onFontsLoaded,
   watchNets,
+  watchZoom,
 } from "./schematic";
 import type { LabelMeasurer } from "./schematic";
 
 interface Figure {
   element: HTMLElement;
+  viewport: HTMLElement;
   stage: HTMLElement;
+  // What the viewer zoomed to, on top of the scale the group fits at.
+  zoom: number;
   redraw(): void;
 }
 
@@ -34,6 +38,8 @@ const GROUP_GAP = 20;
 const VIEWPORT_PADDING = 8;
 // A figure narrower than this cannot hold its diagnostics and net description.
 const MIN_FIGURE_WIDTH = 240;
+const ZOOM_STEP = 1.25;
+const ZOOM_LIMITS = [0.3, 6] as const;
 
 // Blocks written one after another, with only white space or comments between them, form a group.
 function groupBlocks(blocks: HTMLScriptElement[]): HTMLScriptElement[][] {
@@ -61,6 +67,7 @@ function createFigure(
   block: HTMLScriptElement,
   measurer: LabelMeasurer,
   problems: string[],
+  refit: () => void,
 ): Figure {
   // The line break right after the opening tag is not a netlist line; dropping it keeps
   // reported line numbers aligned with what the author wrote.
@@ -75,13 +82,19 @@ function createFigure(
   diagnosticsList.className = "elecuit-diagnostics";
   const info = document.createElement("div");
   info.className = "elecuit-info";
-  const reset = document.createElement("button");
-  reset.type = "button";
-  reset.className = "elecuit-reset";
-  reset.textContent = "값 지우기";
-  reset.hidden = true;
+  const tools = document.createElement("div");
+  tools.className = "elecuit-tools";
+  function addTool(text: string, hint: string, onClick: () => void): HTMLButtonElement {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = text;
+    button.title = hint;
+    button.addEventListener("click", onClick);
+    tools.append(button);
+    return button;
+  }
   viewport.append(stage);
-  element.append(viewport, diagnosticsList, info, reset);
+  element.append(viewport, diagnosticsList, info, tools);
   const title = block.getAttribute("title");
   if (title) {
     const caption = document.createElement("figcaption");
@@ -102,7 +115,33 @@ function createFigure(
     }
   }
   const logic = createLogic(stage, showInfo);
-  reset.addEventListener("click", () => logic.reset());
+
+  // Zooms about a point of the viewport, so what is under the pointer stays under it.
+  function zoomBy(factor: number, clientX: number, clientY: number): void {
+    const next = Math.max(ZOOM_LIMITS[0], Math.min(ZOOM_LIMITS[1], figure.zoom * factor));
+    const ratio = next / figure.zoom;
+    const box = viewport.getBoundingClientRect();
+    const [x, y] = [clientX - box.left, clientY - box.top];
+    const [left, top] = [viewport.scrollLeft, viewport.scrollTop];
+    figure.zoom = next;
+    refit();
+    viewport.scrollLeft = (left + x) * ratio - x;
+    viewport.scrollTop = (top + y) * ratio - y;
+  }
+  function zoomAtCentre(factor: number): void {
+    const box = viewport.getBoundingClientRect();
+    zoomBy(factor, box.left + box.width / 2, box.top + box.height / 2);
+  }
+  watchZoom(viewport, zoomBy);
+  const zoomHint = "Ctrl(⌘)+휠이나 두 손가락으로도 확대·축소합니다.";
+  addTool("−", zoomHint, () => zoomAtCentre(1 / ZOOM_STEP));
+  addTool("+", zoomHint, () => zoomAtCentre(ZOOM_STEP));
+  addTool("맞춤", "처음 크기로 되돌립니다.", () => {
+    figure.zoom = 1;
+    refit();
+  });
+  const reset = addTool("값 지우기", "누른 입력과 기억된 상태를 지웁니다.", () => logic.reset());
+  reset.hidden = true;
 
   function redraw(): void {
     const schematic = drawSchematic(stage, text, measurer.measure);
@@ -135,7 +174,8 @@ function createFigure(
     hovered = net;
     showInfo();
   });
-  return { element, stage, redraw };
+  const figure: Figure = { element, viewport, stage, zoom: 1, redraw };
+  return figure;
 }
 
 // Inserts the figures of one group after its last block and returns the function that redraws
@@ -145,7 +185,7 @@ function createGroup(
   measurer: LabelMeasurer,
   problems: string[],
 ): () => void {
-  const figures = blocks.map((block) => createFigure(block, measurer, problems));
+  const figures = blocks.map((block) => createFigure(block, measurer, problems, () => fit()));
   const group = document.createElement("div");
   group.className = "elecuit-group";
   group.style.gap = `${GROUP_GAP}px`;
@@ -164,11 +204,14 @@ function createGroup(
       columnWidths.length === 1
         ? "minmax(0, 1fr)"
         : columnWidths.map((width) => `${width + VIEWPORT_PADDING}px`).join(" ");
-    figures.forEach(({ stage }, index) => {
+    figures.forEach(({ stage, viewport, zoom }, index) => {
       const sheet = sheets[index];
-      stage.style.width = sheet ? `${sheet.offsetWidth * scale}px` : "";
-      stage.style.height = sheet ? `${sheet.offsetHeight * scale}px` : "";
-      if (sheet) sheet.style.transform = `scale(${scale})`;
+      stage.style.width = sheet ? `${sheet.offsetWidth * scale * zoom}px` : "";
+      stage.style.height = sheet ? `${sheet.offsetHeight * scale * zoom}px` : "";
+      if (sheet) sheet.style.transform = `scale(${scale * zoom})`;
+      // Zoomed in, the figure keeps the height it fits at and the schematic scrolls inside it.
+      viewport.style.maxHeight =
+        sheet && zoom > 1 ? `${sheet.offsetHeight * scale + VIEWPORT_PADDING}px` : "";
     });
   }
 

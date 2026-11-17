@@ -81,8 +81,14 @@
   font-size: 12px;
 }
 
-.elecuit-reset {
+.elecuit-tools {
+  display: flex;
+  gap: 4px;
   margin-top: 4px;
+}
+
+.elecuit-tools button {
+  min-width: 26px;
   padding: 2px 8px;
   border: 1px solid currentColor;
   border-radius: 6px;
@@ -94,6 +100,10 @@
   cursor: pointer;
 }
 
-.elecuit-reset:hover {
+.elecuit-tools button:hover {
   opacity: 1;
+}
+
+.elecuit-tools button[hidden] {
+  display: none;
 }
