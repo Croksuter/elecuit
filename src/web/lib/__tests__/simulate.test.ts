@@ -11,6 +11,7 @@ import { Simulator } from "../simulate";
 import type { Level } from "../simulate";
 
 const ALU = readFileSync(new URL("./fixtures/alu.txt", import.meta.url), "utf8");
+const ALU_MUX = readFileSync(new URL("./fixtures/alu-mux.txt", import.meta.url), "utf8");
 
 // The domino gate of the example without the transistor that precharges X.
 const DOMINO = `input A B phi
@@ -99,16 +100,43 @@ nmos NB g=B d=n1 s=GND`);
     expect(levels(precharged, "Y X Z")).toEqual([1, 1, 0]);
   });
 
-  it("lets the pull-down win over a weak keeper and fight a strong one", () => {
+  it("takes a keeper as weak, written so or not, and lets other pull-ups fight", () => {
     const steps = "A=1 B=1 phi=0 phi=1";
-    const strong = simulate(`${DOMINO}pmos PK g=Z d=Y s=VDD`);
-    apply(strong, steps);
-    expect(strong.levelOf("Y")).toBeNull();
-    const weak = simulate(`${DOMINO}pmos PK g=Z d=Y s=VDD weak`);
-    apply(weak, steps);
-    expect(levels(weak, "Y Z")).toEqual([0, 1]);
-    apply(weak, "phi=0 A=0 phi=1");
-    expect(levels(weak, "Y Z")).toEqual([1, 0]);
+    for (const keeper of ["pmos PK g=Z d=Y s=VDD weak", "pmos PK g=Z d=Y s=VDD"]) {
+      const simulator = simulate(`${DOMINO}${keeper}`);
+      apply(simulator, steps);
+      expect(levels(simulator, "Y Z")).toEqual([0, 1]);
+      apply(simulator, "phi=0 A=0 phi=1");
+      expect(levels(simulator, "Y Z")).toEqual([1, 0]);
+    }
+    // A pull-up that stays on whatever Y does is no keeper: it fights the pull-down.
+    const fighting = simulate(`${DOMINO}pmos PU g=EN d=Y s=VDD`);
+    apply(fighting, `EN=0 ${steps}`);
+    expect(fighting.levelOf("Y")).toBeNull();
+    expect(fighting.isFoughtOver("Y")).toBe(true);
+  });
+
+  it("finds a keeper whose inverter is written as two transistors", () => {
+    const simulator = simulate(`input A B phi
+pmos P1 g=phi d=Y s=VDD
+nmos N1 g=A d=Y s=X
+nmos N2 g=B d=X s=n1
+nmos N3 g=phi d=n1 s=GND
+pmos PI g=Y d=Z s=VDD
+nmos NI g=Y d=Z s=GND
+pmos PK g=Z d=Y s=VDD`);
+    apply(simulator, "A=1 B=1 phi=0 phi=1");
+    expect(levels(simulator, "Y Z")).toEqual([0, 1]);
+  });
+
+  it("forgets what an input decided once the input is released", () => {
+    const simulator = simulate("and G1 in=A,B out=n1\ninv G2 in=n1 out=Y");
+    apply(simulator, "A=1 B=1");
+    expect(levels(simulator, "A n1 Y")).toEqual([1, 1, 0]);
+    apply(simulator, "A=x");
+    expect(levels(simulator, "A n1 Y")).toEqual([null, null, null]);
+    apply(simulator, "B=0");
+    expect(levels(simulator, "A n1 Y")).toEqual([null, 0, 1]);
   });
 
   it("pulls a node up through a resistor until a transistor pulls it down", () => {
@@ -157,15 +185,41 @@ nmos NB g=B d=n1 s=GND`);
     expect(levels(simulator, "Y Z")).toEqual([null, null]);
   });
 
-  it("adds and carries in the ALU once its keeper is weak", () => {
-    const simulator = simulate(
-      ALU.replace("pmos PK g=CO d=Y s=VDD", "pmos PK g=CO d=Y s=VDD weak"),
-    );
+  it("adds and carries in the ALU as its author wrote it", () => {
+    const simulator = simulate(ALU);
     apply(simulator, "A=1 B=1 CI=0 S2=0 S1=0 S0=1 phi=0");
     expect(levels(simulator, "SUM CO F")).toEqual([0, 0, 1]);
     apply(simulator, "phi=1");
     expect(simulator.levelOf("CO")).toBe(1);
     apply(simulator, "S1=1");
     expect(levels(simulator, "XAB F")).toEqual([0, 0]);
+  });
+
+  it("matches every output of the multiplexer ALU for all 64 input sets", () => {
+    const simulator = simulate(ALU_MUX);
+    const wrong: string[] = [];
+    for (let set = 0; set < 64; set++) {
+      const [a, b, ci, s0, s1, s2] = [0, 1, 2, 3, 4, 5].map((bit) => (set >> bit) & 1);
+      apply(simulator, `phi=0 CLK=0 EN=0 A=${a} B=${b} CI=${ci} S0=${s0} S1=${s1} S2=${s2}`);
+      if (simulator.levelOf("Y") !== 1 || simulator.levelOf("CO") !== 0)
+        wrong.push(`${set}: precharge`);
+      apply(simulator, "phi=1 CLK=1 EN=1");
+      const xor = a ^ b;
+      const selected = [1 - a, a & b, a | b, xor, 1 - (a & b), 1 - (a | b), 1 - xor, xor ^ ci][
+        s0 + 2 * s1 + 4 * s2
+      ];
+      const expected = {
+        F: selected,
+        Q: selected,
+        L: selected,
+        SUM: xor ^ ci,
+        CO: (a & b) | (ci & xor),
+        EQ: 1 - xor,
+      };
+      for (const [net, level] of Object.entries(expected)) {
+        if (simulator.levelOf(net) !== level) wrong.push(`${set}: ${net}`);
+      }
+    }
+    expect(wrong).toEqual([]);
   });
 });

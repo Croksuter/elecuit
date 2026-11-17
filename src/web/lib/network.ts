@@ -556,6 +556,10 @@ function layoutNetwork(devices: Device[], sketch: Sketch): Pin[] {
   }
 
   function drawUpright(upright: Upright, x: number): void {
+    sketch.owned(upright.device.name, () => drawOwnedUpright(upright, x));
+  }
+
+  function drawOwnedUpright(upright: Upright, x: number): void {
     const { device, upper, lower } = upright;
     const top = lineY[upright.topLine] + zoneTop[upright.topLine + 1];
     const bottom = top + DEVICE_LENGTH;
@@ -621,34 +625,37 @@ function layoutNetwork(devices: Device[], sketch: Sketch): Pin[] {
       const start = (x0 + x1) / 2 - DEVICE_LENGTH / 2;
       const isPair = item.devices.length === 2;
       item.devices.forEach((device, position) => {
-        const side = position === 0 ? -1 : 1;
-        const deviceY = isPair ? y + side * PAIR_OFFSET : y;
-        const terminals =
-          device.pins[0].net === left
-            ? device.pins
-            : ([...device.pins].reverse() as [Terminal, Terminal]);
-        const stub = drawDevice(
-          sketch,
-          device,
-          flatFrame(start, deviceY, side),
-          terminals,
-          FLAT_REACH,
-        );
-        if (stub) sketch.netLabel([stub[0], stub[1] + side * 10], "middle", device.control!.net);
-        if (isPair) {
-          sketch.wire(left, [x0, y], [x0, deviceY], [start, deviceY]);
-          sketch.wire(right, [start + DEVICE_LENGTH, deviceY], [x1, deviceY], [x1, y]);
-        } else {
-          sketch.wire(left, [x0, y], [start, y]);
-          sketch.wire(right, [start + DEVICE_LENGTH, y], [x1, y]);
-        }
-        const labelY = deviceY - side * (BODY_HALF[device.kind] + 11);
-        const center = (x0 + x1) / 2;
-        if (device.value === null) sketch.nameLabel([center, labelY], "middle", shownName(device));
-        else {
-          sketch.nameLabel([center - 3, labelY], "end", shownName(device));
-          sketch.caption([center + 3, labelY], "start", device.value, "value");
-        }
+        sketch.owned(device.name, () => {
+          const side = position === 0 ? -1 : 1;
+          const deviceY = isPair ? y + side * PAIR_OFFSET : y;
+          const terminals =
+            device.pins[0].net === left
+              ? device.pins
+              : ([...device.pins].reverse() as [Terminal, Terminal]);
+          const stub = drawDevice(
+            sketch,
+            device,
+            flatFrame(start, deviceY, side),
+            terminals,
+            FLAT_REACH,
+          );
+          if (stub) sketch.netLabel([stub[0], stub[1] + side * 10], "middle", device.control!.net);
+          if (isPair) {
+            sketch.wire(left, [x0, y], [x0, deviceY], [start, deviceY]);
+            sketch.wire(right, [start + DEVICE_LENGTH, deviceY], [x1, deviceY], [x1, y]);
+          } else {
+            sketch.wire(left, [x0, y], [start, y]);
+            sketch.wire(right, [start + DEVICE_LENGTH, y], [x1, y]);
+          }
+          const labelY = deviceY - side * (BODY_HALF[device.kind] + 11);
+          const center = (x0 + x1) / 2;
+          if (device.value === null)
+            sketch.nameLabel([center, labelY], "middle", shownName(device));
+          else {
+            sketch.nameLabel([center - 3, labelY], "end", shownName(device));
+            sketch.caption([center + 3, labelY], "start", device.value, "value");
+          }
+        });
       });
     }
   }

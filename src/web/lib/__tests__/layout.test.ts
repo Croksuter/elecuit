@@ -16,6 +16,7 @@ import { EXAMPLE } from "../prompt";
 type Segment = { net: string; box: Box };
 
 const ALU = readFileSync(new URL("./fixtures/alu.txt", import.meta.url), "utf8");
+const ALU_MUX = readFileSync(new URL("./fixtures/alu-mux.txt", import.meta.url), "utf8");
 
 function measure(text: string): { width: number; height: number } {
   return { width: text.length * 8, height: 16 };
@@ -127,6 +128,7 @@ nmos M4 g=A d=a s=GND
 nmos M5 g=A d=b s=GND
 `,
   "multifunction ALU": ALU,
+  "multiplexer ALU with a register": ALU_MUX,
   "RLC low-pass": `vsrc V1 p=in n=GND value=$v_s$
 res R1 a=in b=n1 value=$R$
 ind L1 a=n1 b=out value=$L$

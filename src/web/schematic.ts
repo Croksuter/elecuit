@@ -22,6 +22,9 @@ interface LabelMeasurer {
   reset(): void;
 }
 
+// For each stage, the names of the elements on every net of the circuit drawn there.
+const elementsOn = new WeakMap<HTMLElement, Map<string, string[]>>();
+
 // Measures labels by rendering them off-screen; sizes are cached until `reset`.
 function createMeasurer(): LabelMeasurer {
   const host = document.createElement("div");
@@ -58,16 +61,30 @@ function drawSchematic(stage: HTMLElement, text: string, measure: Measure): Sche
   } else {
     stage.innerHTML = "";
   }
-  return { circuit, diagnostics, notes, hasElements, netUses: collectNetUses(circuit) };
+  const netUses = collectNetUses(circuit);
+  elementsOn.set(
+    stage,
+    new Map(
+      [...netUses].map(([net, uses]) => [
+        net,
+        [...new Set(uses.map((use) => use.where.slice(0, use.where.indexOf("."))))],
+      ]),
+    ),
+  );
+  return { circuit, diagnostics, notes, hasElements, netUses };
 }
 
+// Lights up a net everywhere it is drawn, together with every element that has a terminal on it,
+// and dims the rest of the sheet.
 function highlightNet(stage: HTMLElement, net: string | null): void {
   for (const node of stage.querySelectorAll(".on")) node.classList.remove("on");
   stage.classList.toggle("focusing", net !== null);
   if (net === null) return;
-  for (const node of stage.querySelectorAll(`[data-net="${CSS.escape(net)}"]`)) {
-    node.classList.add("on");
-  }
+  const selectors = [
+    `[data-net="${CSS.escape(net)}"]`,
+    ...(elementsOn.get(stage)?.get(net) ?? []).map((name) => `[data-owner="${CSS.escape(name)}"]`),
+  ];
+  for (const node of stage.querySelectorAll(selectors.join(","))) node.classList.add("on");
 }
 
 // Highlights the net under the pointer and reports it (null when the pointer leaves every net).
@@ -161,7 +178,9 @@ function createLogic(stage: HTMLElement, onChange: () => void): Logic {
       const parts: string[] = [];
       const unknown = simulator.lostToSharing(net)
         ? "모름 (떠 있는 노드끼리 다른 값이 이어져 전하가 나뉨)"
-        : "모름";
+        : simulator.isFoughtOver(net)
+          ? "모름 (0으로 당기는 경로와 1로 당기는 경로가 함께 켜짐)"
+          : "모름";
       if (chosen.size > 0) parts.push(`값 ${simulator.levelOf(net) ?? unknown}`);
       if (simulator.inputs.includes(net)) parts.push("누르면 0 → 1 → 해제");
       return parts.join(" · ");

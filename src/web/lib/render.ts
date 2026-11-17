@@ -26,6 +26,10 @@ function renderTitle(text: string): string {
     .join("");
 }
 
+function ownerOf(primitive: { owner: string | null }): string {
+  return primitive.owner === null ? "" : ` data-owner="${escapeHtml(primitive.owner)}"`;
+}
+
 function renderPrimitive(primitive: Primitive): string {
   switch (primitive.type) {
     case "wire": {
@@ -41,10 +45,10 @@ function renderPrimitive(primitive: Primitive): string {
     case "shape": {
       const device =
         primitive.device === null ? "" : ` data-device="${escapeHtml(primitive.device)}"`;
-      return `<path class="${primitive.isHeavy ? "body heavy" : "body"}"${device} d="${primitive.d}"/>`;
+      return `<path class="${primitive.isHeavy ? "body heavy" : "body"}"${device}${ownerOf(primitive)} d="${primitive.d}"/>`;
     }
     case "circle":
-      return `<circle class="bubble" cx="${primitive.x}" cy="${primitive.y}" r="${primitive.r}"/>`;
+      return `<circle class="bubble"${ownerOf(primitive)} cx="${primitive.x}" cy="${primitive.y}" r="${primitive.r}"/>`;
     case "label":
       return "";
   }
@@ -53,7 +57,7 @@ function renderPrimitive(primitive: Primitive): string {
 function renderLabel(primitive: Extract<Primitive, { type: "label" }>): string {
   const net = primitive.net === null ? "" : ` data-net="${escapeHtml(primitive.net)}"`;
   const style = `left:${primitive.x}px;top:${primitive.y}px;transform:${TRANSLATE[primitive.anchor]}`;
-  return `<div class="label label-${primitive.kind}"${net} style="${style}">${renderLabelContent(primitive.text, primitive.isTex)}</div>`;
+  return `<div class="label label-${primitive.kind}"${net}${ownerOf(primitive)} style="${style}">${renderLabelContent(primitive.text, primitive.isTex)}</div>`;
 }
 
 function render(drawing: Drawing): string {

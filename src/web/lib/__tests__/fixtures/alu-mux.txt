@@ -1,0 +1,57 @@
+# Complete 1-bit ALU
+input A B CI S0 S1 S2 phi CLK EN
+output F SUM CO EQ Q L
+
+label CI $C_{in}$
+label CO $C_{out}$
+label phi $\phi$
+
+# Fundamental gates
+inv GNOT in=A out=NOT_A
+buf GBUF in=A out=BUF_A
+and GAND in=A,B out=AND_AB
+or GOR in=A,B out=OR_AB
+nand GNAND in=A,B out=NAND_AB
+nor GNOR in=A,B out=NOR_AB
+xor GXOR in=A,B out=XAB
+xnor GXNOR in=A,B out=EQ
+
+# Full adder sum
+xor GSUM in=XAB,CI out=SUM
+
+# ALU operation selection
+mux ALU_MUX in=NOT_A,AND_AB,OR_AB,XAB,NAND_AB,NOR_AB,EQ,SUM sel=S0,S1,S2 out=FM
+buf OUTBUF in=FM out=F
+
+# Domino precharge
+pmos PCLK g=phi d=Y s=VDD
+
+# First carry evaluation branch: AB
+nmos N1 g=A d=Y s=X1
+nmos N2 g=B d=X1 s=TAIL
+
+# Second carry branch: CI XOR(A,B)
+nmos N3 g=XAB d=Y s=X2
+nmos N4 g=CI d=X2 s=TAIL
+
+# Evaluation footer
+nmos NCLK g=phi d=TAIL s=GND
+
+# Charge-sharing protection
+pmos PX1 g=phi d=X1 s=VDD
+pmos PX2 g=phi d=X2 s=VDD
+
+# Weak keeper feedback
+pmos PK g=CO d=Y s=VDD
+inv CARRY_INV in=Y out=CO
+
+# Sequential logic
+dff REG1 d=F clk=CLK q=Q
+latch LAT1 d=F en=EN q=L
+
+# Output loads
+cap CF a=F b=GND value=$C_F$
+cap CS a=SUM b=GND value=$C_S$
+cap CC a=CO b=GND value=$C_C$
+cap CQ a=Q b=GND value=$C_Q$
+cap CL a=L b=GND value=$C_L$
