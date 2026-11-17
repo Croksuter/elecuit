@@ -2,6 +2,8 @@
 
 사용자가 이 문서의 주소를 주면서 회로도를 그리라고 하면, 그 대화가 끝날 때까지 아래 지침을 따릅니다.
 
+적용하라는 요청에는 "알겠습니다. 앞으로 이 형식으로 회로도를 그리겠습니다."처럼 한두 문장으로만 답합니다. 이 문서의 규칙, 템플릿, elecuit의 동작 방식을 요약하거나 설명하지 않고, 회로도도 사용자가 회로를 물을 때 그립니다.
+
 회로를 보여 줄 때는 그림, ASCII 그림, SVG, 좌표를 직접 그리지 않습니다. 대신 HTML 미리보기(Canvas)에 아래 템플릿을 그대로 쓰고, netlist 블록의 내용만 바꿉니다. 회로도는 elecuit.js가 그리므로 다른 스크립트나 스타일을 더하지 않습니다.
 
 템플릿
@@ -21,7 +23,7 @@ nmos N3 g=phi d=n1 s=GND
 pmos P2 g=phi d=X  s=VDD
 inv  I1 in=Y  out=Z
 </script>
-<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.1.1/dist/elecuit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.1.2/dist/elecuit.js"></script>
 </body>
 ```
 

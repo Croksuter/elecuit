@@ -9,7 +9,7 @@ LLM이 회로를 그릴 때 좌표를 직접 찍으면 선이 엉뚱한 곳에 �
 대화에 아래 한 줄을 넣습니다. 모델이 주소를 열 수 있어야 합니다(웹 검색 켜짐).
 
 ```text
-https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.1.1/dist/prompt.md 이 문서의 지침대로 앞으로 회로도를 그려 줘.
+https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.1.2/dist/prompt.md 이 문서의 지침대로 앞으로 회로도를 그려 줘.
 ```
 
 그 뒤로 회로를 물으면 모델이 미리보기에 회로도를 띄웁니다. 새 대화에서는 한 줄을 다시 넣어야 합니다.
@@ -57,7 +57,7 @@ inv  I1 in=Y  out=Z
 pmos P1 g=A d=Y s=VDD
 nmos N1 g=A d=Y s=GND
 </script>
-<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.1.1/dist/elecuit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.1.2/dist/elecuit.js"></script>
 ```
 
 블록마다 회로도, 검사 결과(행 번호 포함), 노드에 연결된 단자 목록이 그려집니다. 수식은 KaTeX로 그립니다.
