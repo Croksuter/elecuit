@@ -38,8 +38,11 @@ function renderPrimitive(primitive: Primitive): string {
     }
     case "dot":
       return `<circle class="dot" data-net="${escapeHtml(primitive.net)}" cx="${primitive.x}" cy="${primitive.y}" r="3"/>`;
-    case "shape":
-      return `<path class="${primitive.isHeavy ? "body heavy" : "body"}" d="${primitive.d}"/>`;
+    case "shape": {
+      const device =
+        primitive.device === null ? "" : ` data-device="${escapeHtml(primitive.device)}"`;
+      return `<path class="${primitive.isHeavy ? "body heavy" : "body"}"${device} d="${primitive.d}"/>`;
+    }
     case "circle":
       return `<circle class="bubble" cx="${primitive.x}" cy="${primitive.y}" r="${primitive.r}"/>`;
     case "label":

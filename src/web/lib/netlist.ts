@@ -50,6 +50,8 @@ interface Device {
   pins: [Terminal, Terminal];
   control: Terminal | null;
   value: Caption | null;
+  // A weak device loses to any other path that drives the same node (a keeper, a bleeder).
+  isWeak: boolean;
 }
 
 // Reads its inputs and drives its outputs: a logic gate, an op-amp, a flip-flop or a plain box.
@@ -389,7 +391,16 @@ function parse(text: string): ParseResult {
       const kind = keyword as DeviceKind;
       const spec = DEVICE_TERMINALS[kind];
       const required = spec.control === null ? spec.pins : [spec.control, ...spec.pins];
-      const fields = readFields(line, name, fieldTokens, required, ["value"]);
+      // `weak` stands alone on a MOS line; every other token is `key=value`.
+      const isMos = kind === "nmos" || kind === "pmos";
+      const isWeak = isMos && fieldTokens.includes("weak");
+      const fields = readFields(
+        line,
+        name,
+        isWeak ? fieldTokens.filter((token) => token !== "weak") : fieldTokens,
+        required,
+        ["value"],
+      );
       if (fields === null) continue;
       const nets = required.map((key) => readNet(line, fields.get(key)!, `${name}.${key}`));
       const value = readCaption(line, name, "value", fields.get("value"));
@@ -403,6 +414,7 @@ function parse(text: string): ParseResult {
         pins: terminals.slice(-2) as [Terminal, Terminal],
         control: spec.control === null ? null : terminals[0],
         value,
+        isWeak,
       });
       continue;
     }

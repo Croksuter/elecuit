@@ -126,6 +126,14 @@ describe("lint", () => {
     );
   });
 
+  it("asks for weak on a keeper and accepts the line once it has it", () => {
+    const stage = ["pmos P1 g=phi d=Y s=VDD", "nmos N1 g=A d=Y s=GND", "inv I1 in=Y out=Z"];
+    const strong = messages([...stage, "pmos PK g=Z d=Y s=VDD"].join("\n"));
+    expect(strong.some((entry) => entry.startsWith("4:warning:PK: Y를 반전한 Z가"))).toBe(true);
+    const weak = messages([...stage, "pmos PK g=Z d=Y s=VDD weak"].join("\n"));
+    expect(weak.filter((entry) => entry.includes("PK"))).toEqual([]);
+  });
+
   it("rejects two drivers on one output and unreadable KaTeX", () => {
     const text = ["input A", "inv I1 in=A out=Z", "inv I2 in=A out=Z", "label Z $\\frac{1$"].join(
       "\n",

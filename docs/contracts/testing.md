@@ -16,3 +16,4 @@
 - **12.** 블록의 `title`이 마크업이나 링크로 주입되지 않는지는 `src/web/lib/__tests__/render.test.ts`(T1/unit, `npm test`에 포함)가 확인한다. (created by discussions/2026-11-17-security.md#2026-11-17-블록-제목)
 - **13.** 배치의 올바름은 `src/web/lib/__tests__/layout.test.ts`(T1/unit)가 확인한다. 서로 다른 노드의 선이 닿지 않는지, 여러 조각으로 그려진 노드의 조각마다 그 이름이 있는지를 대표 회로와 무작위로 만든 회로 150개에서 본다. 사용자가 보고한 ALU는 `src/web/lib/__tests__/fixtures/alu.txt`에 둔다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-범용-회로와-2차원-배치)
 - **14.** `$…$` 없이 쓴 `value`와 `title`이 마크업으로 주입되지 않는지는 `src/web/lib/__tests__/render.test.ts`(T1/unit)가 확인한다. (created by discussions/2026-11-17-security.md#2026-11-17-소자-값과-블록-제목)
+- **15.** 논리 값 계산은 `src/web/lib/__tests__/simulate.test.ts`(T1/unit)가 확인한다. 게이트, CMOS NAND, domino의 precharge·evaluate·전하 공유, 약한 keeper, 저항 pull-up, 플립플롭과 MUX, NOR 래치, 정해지지 않는 고리, 아날로그 소자, ALU를 본다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-입력을-눌러-동작-보기)

@@ -487,8 +487,11 @@ function layoutNetwork(devices: Device[], sketch: Sketch): Pin[] {
   function valueWidth(device: Device): number {
     return device.value === null ? 0 : sketch.captionWidth(device.value, "value");
   }
+  function shownName(device: Device): string {
+    return device.isWeak ? `${device.name} (weak)` : device.name;
+  }
   function nameWidth(device: Device): number {
-    return sketch.captionWidth({ text: device.name, isTex: false }, "name");
+    return sketch.captionWidth({ text: shownName(device), isTex: false }, "name");
   }
   function leftExtent(device: Device): number {
     if (device.control === null) return 16;
@@ -575,7 +578,11 @@ function layoutNetwork(devices: Device[], sketch: Sketch): Pin[] {
     }
     const labelX = x + BODY_HALF[device.kind] + NAME_GAP;
     const middle = top + DEVICE_LENGTH / 2;
-    sketch.nameLabel([labelX, device.value === null ? middle : middle - 9], "start", device.name);
+    sketch.nameLabel(
+      [labelX, device.value === null ? middle : middle - 9],
+      "start",
+      shownName(device),
+    );
     if (device.value !== null) sketch.caption([labelX, middle + 9], "start", device.value, "value");
   }
 
@@ -637,9 +644,9 @@ function layoutNetwork(devices: Device[], sketch: Sketch): Pin[] {
         }
         const labelY = deviceY - side * (BODY_HALF[device.kind] + 11);
         const center = (x0 + x1) / 2;
-        if (device.value === null) sketch.nameLabel([center, labelY], "middle", device.name);
+        if (device.value === null) sketch.nameLabel([center, labelY], "middle", shownName(device));
         else {
-          sketch.nameLabel([center - 3, labelY], "end", device.name);
+          sketch.nameLabel([center - 3, labelY], "end", shownName(device));
           sketch.caption([center + 3, labelY], "start", device.value, "value");
         }
       });

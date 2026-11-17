@@ -80,3 +80,20 @@
   opacity: 0.7;
   font-size: 12px;
 }
+
+.elecuit-reset {
+  margin-top: 4px;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.elecuit-reset:hover {
+  opacity: 1;
+}
