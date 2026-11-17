@@ -4,13 +4,11 @@ import katex from "katex";
 
 import embedStyles from "./embed.css?inline";
 import { arrange } from "./lib/arrange";
-import type { NetUse } from "./lib/lint";
 import { renderTitle } from "./lib/render";
 import schematicStyles from "./schematic.css?inline";
 import {
   createLogic,
   createMeasurer,
-  describeNet,
   drawSchematic,
   onFontsLoaded,
   watchNets,
@@ -21,6 +19,8 @@ import type { LabelMeasurer } from "./schematic";
 interface Figure {
   element: HTMLElement;
   viewport: HTMLElement;
+  // The title and the inputs, floating over the top left of the frame.
+  head: HTMLElement;
   stage: HTMLElement;
   // What the viewer zoomed to, on top of the scale the group fits at.
   zoom: number;
@@ -29,17 +29,26 @@ interface Figure {
 
 const BLOCK_SELECTOR = 'script[type="text/elecuit"]';
 const KATEX_STYLES = `https://cdn.jsdelivr.net/npm/katex@${katex.version}/dist/katex.min.css`;
-const HOVER_HINT = "노드에 마우스를 올리면 연결된 단자가 보입니다.";
-const INPUT_HINT =
-  "점선으로 두른 입력을 누르면 0 → 1 → 해제 순으로 바뀌고, 회로의 값이 따라 바뀝니다.";
 const GROUP_GAP = 20;
-// Left and right padding of `.elecuit-viewport` together; each figure is this much wider than
-// its scaled sheet.
-const VIEWPORT_PADDING = 8;
-// A figure narrower than this cannot hold its diagnostics and net description.
+// Room the frame keeps around the schematic so the controls floating over it cover nothing at
+// the fitted size: its border and left margin, and on the right the column of buttons.
+const FRAME_BORDER = 2;
+const LEFT_ROOM = 16;
+const RIGHT_ROOM = 60;
+const BOTTOM_ROOM = 16;
+const SIDE_ROOM = FRAME_BORDER + LEFT_ROOM + RIGHT_ROOM;
+// A figure narrower than this cannot hold its inputs and its diagnostics.
 const MIN_FIGURE_WIDTH = 240;
 const ZOOM_STEP = 1.25;
 const ZOOM_LIMITS = [0.3, 6] as const;
+const ICONS = {
+  zoomIn: '<path d="M12 5v14M5 12h14"/>',
+  zoomOut: '<path d="M5 12h14"/>',
+  fit: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  names:
+    '<path d="M12 3H4v8l9.5 9.5a1.5 1.5 0 0 0 2.1 0l5.9-5.9a1.5 1.5 0 0 0 0-2.1z"/><circle cx="8" cy="7.5" r="1.4"/>',
+  reset: '<path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v5h5"/>',
+};
 
 // Blocks written one after another, with only white space or comments between them, form a group.
 function groupBlocks(blocks: HTMLScriptElement[]): HTMLScriptElement[][] {
@@ -63,6 +72,9 @@ function groupBlocks(blocks: HTMLScriptElement[]): HTMLScriptElement[][] {
   return groups;
 }
 
+// A figure is a frame the schematic scrolls in, with its controls floating in the corners the way
+// a map's do: title and inputs top left, name toggle and reset top right, zoom bottom right.
+// Only the diagnostics sit outside, below the frame.
 function createFigure(
   block: HTMLScriptElement,
   measurer: LabelMeasurer,
@@ -74,50 +86,53 @@ function createFigure(
   const text = (block.textContent ?? "").replace(/^\r?\n/, "");
   const element = document.createElement("figure");
   element.className = "elecuit";
+  const frame = document.createElement("div");
+  frame.className = "elecuit-frame";
   const viewport = document.createElement("div");
   viewport.className = "elecuit-viewport";
+  viewport.style.padding = `0 ${RIGHT_ROOM}px ${BOTTOM_ROOM}px ${LEFT_ROOM}px`;
   const stage = document.createElement("div");
   stage.className = "stage";
-  const diagnosticsList = document.createElement("ul");
-  diagnosticsList.className = "elecuit-diagnostics";
-  const info = document.createElement("div");
-  info.className = "elecuit-info";
-  const tools = document.createElement("div");
-  tools.className = "elecuit-tools";
-  function addTool(text: string, hint: string, onClick: () => void): HTMLButtonElement {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = text;
-    button.title = hint;
-    button.addEventListener("click", onClick);
-    tools.append(button);
-    return button;
-  }
+  const head = document.createElement("div");
+  head.className = "elecuit-head";
   const inputs = document.createElement("div");
   inputs.className = "input-panel elecuit-inputs";
   inputs.hidden = true;
-  viewport.append(stage);
-  element.append(inputs, viewport, diagnosticsList, info, tools);
   const title = block.getAttribute("title");
   if (title) {
     const caption = document.createElement("figcaption");
     caption.className = "elecuit-title";
     caption.innerHTML = renderTitle(title);
-    element.prepend(caption);
+    head.append(caption);
+  }
+  head.append(inputs);
+  const upperTools = document.createElement("div");
+  upperTools.className = "elecuit-tools elecuit-tools-upper";
+  const lowerTools = document.createElement("div");
+  lowerTools.className = "elecuit-tools elecuit-tools-lower";
+  const diagnosticsList = document.createElement("ul");
+  diagnosticsList.className = "elecuit-diagnostics";
+  viewport.append(stage);
+  frame.append(viewport, head, upperTools, lowerTools);
+  element.append(frame, diagnosticsList);
+
+  function addTool(
+    group: HTMLElement,
+    label: string,
+    icon: string,
+    onClick: () => void,
+  ): HTMLButtonElement {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.title = label;
+    button.setAttribute("aria-label", label);
+    button.innerHTML = `<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>`;
+    button.addEventListener("click", onClick);
+    group.append(button);
+    return button;
   }
 
-  let netUses = new Map<string, NetUse[]>();
-  let hovered: string | null = null;
-
-  function showInfo(): void {
-    if (stage.childElementCount === 0) info.textContent = "";
-    else if (hovered === null) info.textContent = logic.hasInputs() ? INPUT_HINT : HOVER_HINT;
-    else {
-      const about = [describeNet(hovered, netUses.get(hovered) ?? []), logic.describe(hovered)];
-      info.textContent = about.filter(Boolean).join(" · ");
-    }
-  }
-  const logic = createLogic(stage, inputs, showInfo);
+  const logic = createLogic(stage, inputs, () => {});
 
   // Zooms about a point of the viewport, so what is under the pointer stays under it.
   function zoomBy(factor: number, clientX: number, clientY: number): void {
@@ -136,22 +151,29 @@ function createFigure(
     zoomBy(factor, box.left + box.width / 2, box.top + box.height / 2);
   }
   watchZoom(viewport, zoomBy);
-  const zoomHint = "Ctrl(⌘)+휠이나 두 손가락으로도 확대·축소합니다.";
-  addTool("−", zoomHint, () => zoomAtCentre(1 / ZOOM_STEP));
-  addTool("+", zoomHint, () => zoomAtCentre(ZOOM_STEP));
-  addTool("맞춤", "처음 크기로 되돌립니다.", () => {
+
+  const names = addTool(upperTools, "소자 이름 숨기기", ICONS.names, () => {
+    const isHidden = stage.classList.toggle("nameless");
+    const label = isHidden ? "소자 이름 보이기" : "소자 이름 숨기기";
+    names.title = label;
+    names.setAttribute("aria-label", label);
+    names.setAttribute("aria-pressed", String(isHidden));
+  });
+  const reset = addTool(upperTools, "누른 입력과 기억된 상태 지우기", ICONS.reset, () =>
+    logic.reset(),
+  );
+  reset.hidden = true;
+  addTool(lowerTools, "확대 (Ctrl·⌘+휠, 두 손가락으로도)", ICONS.zoomIn, () =>
+    zoomAtCentre(ZOOM_STEP),
+  );
+  addTool(lowerTools, "축소", ICONS.zoomOut, () => zoomAtCentre(1 / ZOOM_STEP));
+  addTool(lowerTools, "처음 크기로 맞춤", ICONS.fit, () => {
     figure.zoom = 1;
     refit();
   });
-  const names = addTool("이름 숨기기", "PCLK 같은 소자 이름을 숨기거나 보입니다.", () => {
-    names.textContent = stage.classList.toggle("nameless") ? "이름 보이기" : "이름 숨기기";
-  });
-  const reset = addTool("값 지우기", "누른 입력과 기억된 상태를 지웁니다.", () => logic.reset());
-  reset.hidden = true;
 
   function redraw(): void {
     const schematic = drawSchematic(stage, text, measurer.measure);
-    netUses = schematic.netUses;
     const lines = [
       ...problems.map((message) => ({ severity: "error", text: message })),
       ...schematic.diagnostics.map((entry) => ({
@@ -173,14 +195,10 @@ function createFigure(
     );
     logic.load(schematic.circuit, text);
     reset.hidden = !logic.hasInputs();
-    showInfo();
   }
 
-  watchNets(stage, (net) => {
-    hovered = net;
-    showInfo();
-  });
-  const figure: Figure = { element, viewport, stage, zoom: 1, redraw };
+  watchNets(stage, () => {});
+  const figure: Figure = { element, viewport, head, stage, zoom: 1, redraw };
   return figure;
 }
 
@@ -200,24 +218,27 @@ function createGroup(
 
   function fit(): void {
     const sheets = figures.map((figure) => figure.stage.querySelector<HTMLElement>(".sheet"));
-    // Counting the padding as part of the gap leaves `arrange` with sheet widths only.
+    // Counting each frame's side room as part of the gap leaves `arrange` with sheet widths only.
     const { scale, columnWidths } = arrange(
       sheets.map((sheet) => Math.max(sheet?.offsetWidth ?? 0, MIN_FIGURE_WIDTH)),
-      group.clientWidth - VIEWPORT_PADDING,
-      GROUP_GAP + VIEWPORT_PADDING,
+      group.clientWidth - SIDE_ROOM,
+      GROUP_GAP + SIDE_ROOM,
     );
     group.style.gridTemplateColumns =
       columnWidths.length === 1
         ? "minmax(0, 1fr)"
-        : columnWidths.map((width) => `${width + VIEWPORT_PADDING}px`).join(" ");
-    figures.forEach(({ stage, viewport, zoom }, index) => {
+        : columnWidths.map((width) => `${width + SIDE_ROOM}px`).join(" ");
+    figures.forEach(({ stage, viewport, head, zoom }, index) => {
       const sheet = sheets[index];
       stage.style.width = sheet ? `${sheet.offsetWidth * scale * zoom}px` : "";
       stage.style.height = sheet ? `${sheet.offsetHeight * scale * zoom}px` : "";
       if (sheet) sheet.style.transform = `scale(${scale * zoom})`;
-      // Zoomed in, the figure keeps the height it fits at and the schematic scrolls inside it.
+      // The schematic starts below the title and inputs, however many lines they take.
+      const top = head.offsetHeight + 24;
+      viewport.style.paddingTop = `${top}px`;
+      // Zoomed in, the frame keeps the height it fits at and the schematic scrolls inside it.
       viewport.style.maxHeight =
-        sheet && zoom > 1 ? `${sheet.offsetHeight * scale + VIEWPORT_PADDING}px` : "";
+        sheet && zoom > 1 ? `${sheet.offsetHeight * scale + top + BOTTOM_ROOM}px` : "";
     });
   }
 

@@ -19,3 +19,4 @@
 - **12.** 배치는 `src/web/lib`의 파일 여섯으로 나눈다. `drawing.ts`(그리기 요소와 겹침 검사), `symbols.ts`(소자 기호), `network.ts`(이어진 소자 묶음의 배치), `blocks.ts`(게이트·증폭기·상자), `place.ts`(묶음과 블록을 열에 놓고 선 긋기), `layout.ts`(진입점). (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-범용-회로와-2차원-배치)
 - **13.** `demo/gallery.html`은 종류별 회로를 빌드한 임베드 번들로 한 페이지에 그려 보는 정적 파일이다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-범용-회로와-2차원-배치)
 - **14.** 논리 값 계산은 `src/web/lib/simulate.ts`의 `Simulator`가 하고, 누르기와 색 표시는 `src/web/schematic.ts`의 `createLogic`이 페이지와 임베드에 함께 제공한다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-입력을-눌러-동작-보기)
+- **15.** 최신 주소의 캐시 비우기는 릴리스마다 한 번만 요청하고, 응답 본문의 `throttled`가 `true`이면 `throttlingReset`(초)이 지난 뒤 다시 요청한다. 연달아 릴리스할 때는 마지막 뒤에만 비운다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-최신-주소-갱신이-제한됨)
