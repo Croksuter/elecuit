@@ -91,8 +91,8 @@
   font-size: 1em;
 }
 
-/* Hovering a net dims the rest of the sheet. The net and the elements on it keep their own
-   colours, which may be showing logic levels; only the net's wires get thicker. */
+/* Hovering a net dims the rest of the sheet. The net and the elements on it stay exactly as
+   they were, colours and stroke widths alike, so logic levels still read the same. */
 .stage.focusing .wire,
 .stage.focusing .dot {
   opacity: 0.22;
@@ -106,10 +106,6 @@
 
 .stage.focusing .on {
   opacity: 1;
-}
-
-.stage .wire.on {
-  stroke-width: 2.4;
 }
 
 /* Logic levels: a net at 1 or 0 takes that level's colour, wires and name alike. */

@@ -1,6 +1,6 @@
 # elecuit 회로도 지침
 
-버전: 0.7.2
+버전: 0.7.3
 최신 문서: https://cdn.jsdelivr.net/gh/Croksuter/elecuit@latest/dist/prompt.md
 
 사용자가 이 문서의 주소를 주면서 회로도를 그리라고 하면, 그 대화가 끝날 때까지 아래 지침을 따릅니다.
@@ -32,7 +32,7 @@ nmos N3 g=phi d=n1 s=GND
 pmos P2 g=phi d=X  s=VDD
 inv  I1 in=Y  out=Z
 </script>
-<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.7.2/dist/elecuit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.7.3/dist/elecuit.js"></script>
 </body>
 ```
 

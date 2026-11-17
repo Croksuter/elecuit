@@ -70,7 +70,7 @@ inv  I1 in=Y  out=Z
 pmos P1 g=A d=Y s=VDD
 nmos N1 g=A d=Y s=GND
 </script>
-<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.7.2/dist/elecuit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.7.3/dist/elecuit.js"></script>
 ```
 
 블록마다 회로도, 검사 결과(행 번호 포함), 노드에 연결된 단자 목록이 그려집니다. 수식은 KaTeX로 그립니다.
@@ -91,7 +91,7 @@ nmos N1 g=A d=Y s=GND
 
 `이름 숨기기` 버튼은 `PCLK`, `G1` 같은 소자 이름을 숨깁니다. 노드 이름과 기호 안의 글자(핀 이름, 상자 제목, `(weak)`)는 남습니다.
 
-노드에 마우스를 올리면 그 노드가 그려진 모든 선과 이름, 그 노드에 단자가 닿은 모든 소자가 함께 또렷이 남고 나머지는 흐려집니다. 남는 쪽의 색은 바뀌지 않으므로, 값을 나타내는 색이 그대로 보입니다.
+노드에 마우스를 올리면 그 노드가 그려진 모든 선과 이름, 그 노드에 단자가 닿은 모든 소자가 함께 또렷이 남고 나머지는 흐려집니다. 남는 쪽은 색도 선 굵기도 바뀌지 않으므로, 값을 나타내는 색이 그대로 보입니다.
 
 - 누를 수 있는 것은 `input`으로 선언한 노드와, 게이트나 블록의 입력으로만 쓰이는 노드입니다.
 - 게이트·MUX는 0, 1, 모름의 세 값으로 계산합니다. 플립플롭은 클록이 0에서 1로 바뀔 때 값을 잡습니다.
