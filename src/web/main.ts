@@ -17,6 +17,7 @@ import {
   highlightNet,
   onFontsLoaded,
   watchNets,
+  watchZoom,
 } from "./schematic";
 
 const STORAGE_KEY = "elecuit.source";
@@ -233,6 +234,19 @@ diagnosticsList.addEventListener("click", (event) => {
 });
 
 watchNets(stage, showNet);
+// Zooms about the pointer: what is under it stays under it.
+watchZoom(canvas, (factor, clientX, clientY) => {
+  const next = Math.max(ZOOM_LIMITS[0], Math.min(ZOOM_LIMITS[1], zoom * factor));
+  const ratio = next / zoom;
+  const box = canvas.getBoundingClientRect();
+  const [x, y] = [clientX - box.left, clientY - box.top];
+  const [left, top] = [canvas.scrollLeft, canvas.scrollTop];
+  isFitting = false;
+  zoom = next;
+  applyZoom();
+  canvas.scrollLeft = (left + x) * ratio - x;
+  canvas.scrollTop = (top + y) * ratio - y;
+});
 
 element("zoom-in").addEventListener("click", () => {
   isFitting = false;

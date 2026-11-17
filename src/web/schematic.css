@@ -1,6 +1,8 @@
 /* role: schematic sheet, label and net-highlight styles shared by the page and the embed bundle. */
 
 .stage {
+  /* Two fingers zoom the schematic (see watchZoom); one finger still scrolls. */
+  touch-action: pan-x pan-y;
   --paper-ink: #1b1f24;
   --paper-muted: #7a8494;
   --paper-accent: #2459d6;
