@@ -1,0 +1,24 @@
+{
+  "name": "elecuit",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && vite build --config vite.embed.config.ts",
+    "test": "vitest run",
+    "check": "tsc --noEmit && prettier --check src",
+    "format": "prettier --write src"
+  },
+  "dependencies": {
+    "html-to-image": "1.11.13",
+    "katex": "0.19.1"
+  },
+  "devDependencies": {
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "vite-plugin-singlefile": "2.3.4",
+    "vitest": "5.0.5"
+  }
+}
