@@ -56,14 +56,18 @@ inv  I1 in=Y  out=Z
 ## 직접 HTML에 넣기
 
 ```html
-<script type="text/elecuit">
+<script type="text/elecuit" title="인버터">
 pmos P1 g=A d=Y s=VDD
 nmos N1 g=A d=Y s=GND
 </script>
-<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.1.3/dist/elecuit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.2.0/dist/elecuit.js"></script>
 ```
 
 블록마다 회로도, 검사 결과(행 번호 포함), 노드에 연결된 단자 목록이 그려집니다. 수식은 KaTeX로 그립니다.
+
+- `title`은 회로도 위에 제목으로 보이고, `$…$`로 감싼 부분은 수식으로 그립니다. 없어도 됩니다.
+- 사이에 다른 요소 없이 연달아 쓴 블록은 한 묶음입니다. 한 묶음의 회로는 같은 배율로 나란히 놓이고, 폭이 모자라면 아래 줄로 넘어갑니다.
+- 블록 사이에 `<p>` 같은 요소가 있으면 묶음이 나뉘어 따로 그려집니다.
 
 ## 그리는 범위
 

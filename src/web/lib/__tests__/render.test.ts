@@ -1,11 +1,11 @@
-// role: checks that hostile netlist text cannot inject markup or script links into the rendered sheet.
+// role: checks that hostile netlist text and titles cannot inject markup or script links into the page.
 // cell: T1/unit
 
 import { describe, expect, it } from "vitest";
 
 import { layout } from "../layout";
 import { parse } from "../netlist";
-import { render } from "../render";
+import { render, renderTitle } from "../render";
 
 function measure(text: string): { width: number; height: number } {
   return { width: text.length * 8, height: 16 };
@@ -24,6 +24,17 @@ describe("render", () => {
     expect(html).not.toMatch(/<img\b/i);
     expect(html).not.toMatch(/href\s*=/i);
     expect(html).not.toMatch(/class="[^"]*\bevil\b/);
+  });
+
+  it("escapes a title's words and draws its $…$ spans without links", () => {
+    const html = renderTitle(
+      '<img src=x onerror=alert(1)> $\\href{javascript:alert(1)}{x}$ $\\phi_1$ 비용 $5 "개선"',
+    );
+    expect(html).not.toMatch(/<img\b/i);
+    expect(html).not.toMatch(/<a\b/i);
+    expect(html).not.toMatch(/href\s*=/i);
+    expect(html).toContain('class="katex"');
+    expect(html).toContain("비용 $5 &#34;개선&#34;");
   });
 
   it("rejects names that carry markup before they reach the sheet", () => {
