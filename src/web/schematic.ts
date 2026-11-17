@@ -5,7 +5,7 @@ import { layout } from "./lib/layout";
 import type { LabelKind, Measure } from "./lib/drawing";
 import { collectNetUses, lint } from "./lib/lint";
 import type { NetUse } from "./lib/lint";
-import { parse } from "./lib/netlist";
+import { isRail, parse } from "./lib/netlist";
 import type { Circuit, Diagnostic } from "./lib/netlist";
 import { render, renderLabelContent } from "./lib/render";
 import { Simulator } from "./lib/simulate";
@@ -125,13 +125,14 @@ function createLogic(stage: HTMLElement, panel: HTMLElement, onChange: () => voi
   // The levels the viewer chose, in the order chosen; they outlive a redraw.
   const chosen = new Map<string, 0 | 1>();
 
-  // Levels show only once the viewer has set something, so an untouched sheet stays plain.
+  // The supply rails show 1 and 0 from the start. Other nets show a known level only in a circuit
+  // that has inputs to set; elsewhere (an amplifier, a filter) 0 and 1 would say nothing true.
   function paint(): void {
     if (simulator === null) return;
-    const isActive = chosen.size > 0;
+    const isDigital = simulator.inputs.length > 0;
     for (const node of stage.querySelectorAll("[data-net]")) {
       const net = node.getAttribute("data-net")!;
-      const level = isActive ? simulator.levelOf(net) : null;
+      const level = isDigital || isRail(net) ? simulator.levelOf(net) : null;
       if (level === null) node.removeAttribute("data-level");
       else node.setAttribute("data-level", String(level));
       node.classList.toggle("settable", simulator.inputs.includes(net));
@@ -144,7 +145,7 @@ function createLogic(stage: HTMLElement, panel: HTMLElement, onChange: () => voi
     }
     for (const node of stage.querySelectorAll("[data-device]")) {
       const device = devices.find((element) => element.name === node.getAttribute("data-device"));
-      const state = isActive && device?.type === "device" ? simulator.conducts(device) : null;
+      const state = isDigital && device?.type === "device" ? simulator.conducts(device) : null;
       if (state === null) node.removeAttribute("data-state");
       else node.setAttribute("data-state", state ? "on" : "off");
     }
@@ -225,7 +226,9 @@ function createLogic(stage: HTMLElement, panel: HTMLElement, onChange: () => voi
         : simulator.isFoughtOver(net)
           ? "모름 (0으로 당기는 경로와 1로 당기는 경로가 함께 켜짐)"
           : "모름";
-      if (chosen.size > 0) parts.push(`값 ${simulator.levelOf(net) ?? unknown}`);
+      if (simulator.inputs.length > 0 || isRail(net)) {
+        parts.push(`값 ${simulator.levelOf(net) ?? unknown}`);
+      }
       if (simulator.inputs.includes(net)) parts.push("누르면 0 → 1 → 해제");
       return parts.join(" · ");
     },
