@@ -1,4 +1,4 @@
-// role: turns positioned drawing primitives into an SVG sheet with KaTeX label overlays.
+// role: renders drawing primitives as an SVG sheet with KaTeX label overlays, and a title as markup.
 
 import katex from "katex";
 
@@ -16,6 +16,14 @@ function escapeHtml(text: string): string {
 
 function renderLabelContent(text: string, isTex: boolean): string {
   return isTex ? katex.renderToString(text, { throwOnError: false }) : escapeHtml(text);
+}
+
+// A title mixes plain words with $…$ spans; a `$` without a partner stays a plain character.
+function renderTitle(text: string): string {
+  return text
+    .split(/\$([^$]+)\$/)
+    .map((part, index) => renderLabelContent(part, index % 2 === 1))
+    .join("");
 }
 
 function renderPrimitive(primitive: Primitive): string {
@@ -61,4 +69,4 @@ function render(drawing: Drawing): string {
   );
 }
 
-export { render, renderLabelContent };
+export { render, renderLabelContent, renderTitle };

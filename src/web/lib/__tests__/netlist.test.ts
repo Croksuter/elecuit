@@ -94,7 +94,7 @@ describe("lint", () => {
 describe("canvasPrompt", () => {
   it("gives a template whose netlist block is clean and whose script comes last", () => {
     const prompt = canvasPrompt("https://example.test/elecuit.js");
-    const block = /<script type="text\/elecuit">\n([\s\S]*?)<\/script>/.exec(prompt);
+    const block = /<script type="text\/elecuit" title="[^"]+">\n([\s\S]*?)<\/script>/.exec(prompt);
     expect(block).not.toBeNull();
     expect(messages(block![1])).toEqual([]);
     expect(prompt.indexOf('<script src="https://example.test/elecuit.js">')).toBeGreaterThan(

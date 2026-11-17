@@ -12,3 +12,5 @@
 - **8.** 템플릿의 번들 주소가 `package.json`의 version을 정확히 가리키는지는 `src/web/lib/__tests__/netlist.test.ts`(T1/unit)가 확인한다. (created by discussions/2026-11-17-security.md#2026-11-17-주소-고정)
 - ~~**9.** `README.md`의 jsDelivr 주소가 모두 `package.json`의 version을 가리키는지는 `src/web/lib/__tests__/netlist.test.ts`(T1/unit)가 확인한다.~~ (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-지침-문서-배포) (changed to #10)
 - **10.** `README.md`의 jsDelivr 주소가 최신 지침 주소와 현재 version의 번들 주소 둘뿐인지, 지침 문서가 자기 version과 최신 주소를 적는지는 `src/web/lib/__tests__/netlist.test.ts`(T1/unit)가 확인한다. (created by discussions/2026-11-17-security.md#2026-11-17-자동-최신화) (changed from #9)
+- **11.** 한 묶음의 회로가 몇 열로 놓이고 어떤 배율을 함께 쓰는지는 `src/web/lib/__tests__/arrange.test.ts`(T1/unit, `npm test`에 포함)가 확인한다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-여러-회로-배치)
+- **12.** 블록의 `title`이 마크업이나 링크로 주입되지 않는지는 `src/web/lib/__tests__/render.test.ts`(T1/unit, `npm test`에 포함)가 확인한다. (created by discussions/2026-11-17-security.md#2026-11-17-블록-제목)

@@ -1,6 +1,6 @@
 # elecuit 회로도 지침
 
-버전: 0.1.3
+버전: 0.2.0
 최신 문서: https://cdn.jsdelivr.net/gh/Croksuter/elecuit@latest/dist/prompt.md
 
 사용자가 이 문서의 주소를 주면서 회로도를 그리라고 하면, 그 대화가 끝날 때까지 아래 지침을 따릅니다.
@@ -20,7 +20,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <body>
-<script type="text/elecuit">
+<script type="text/elecuit" title="전하 공유를 막는 X precharge">
 # 1-3 개선: 전하 공유를 막는 X precharge
 input  A B phi
 output Z
@@ -32,12 +32,14 @@ nmos N3 g=phi d=n1 s=GND
 pmos P2 g=phi d=X  s=VDD
 inv  I1 in=Y  out=Z
 </script>
-<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.1.3/dist/elecuit.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Croksuter/elecuit@0.2.0/dist/elecuit.js"></script>
 </body>
 ```
 
 템플릿 규칙
-- 회로 하나가 <script type="text/elecuit"> 블록 하나입니다. 회로를 여러 개 보여 주려면(예: 원래 회로와 개선 회로) 블록을 여러 개 쓰고, 블록 사이에 <p>로 짧은 설명을 넣어도 됩니다.
+- 회로 하나가 <script type="text/elecuit"> 블록 하나이고, title="…"에 그 회로의 제목을 씁니다. 제목에도 $KaTeX$를 쓸 수 있습니다.
+- 회로를 여러 개 보여 주려면(예: 원래 회로와 개선 회로) 블록을 사이에 아무것도 두지 않고 연달아 씁니다. 연달아 쓴 회로는 같은 크기로 나란히 그려지고, 폭이 모자라면 아래로 넘어갑니다. 배치는 elecuit.js가 정하므로 열 수나 크기를 지정하지 않습니다.
+- 설명은 답변 본문에 쓰거나, 블록 묶음의 앞이나 뒤에 <p>로 씁니다. 블록 사이에 <p>를 넣으면 그 앞뒤의 회로는 나란히 놓이지 않습니다.
 - elecuit.js를 불러오는 <script src> 줄은 맨 끝에 한 번만 둡니다.
 - 미리보기는 netlist의 오류와 경고를 회로도 아래에 행 번호와 함께 보여 줍니다. 사용자가 그 내용을 알려 주면 netlist를 고쳐 템플릿 전체를 다시 씁니다.
 

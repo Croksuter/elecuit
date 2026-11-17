@@ -1,9 +1,19 @@
-/* role: figure, diagnostics and caption styles of an embedded schematic inside a host page. */
+/* role: group, figure, title, diagnostics and net-info styles of embedded schematics inside a host page. */
+
+/* The gap and the column widths come from embed.ts, which computes the shared scale with them. */
+.elecuit-group {
+  display: grid;
+  align-items: start;
+  margin: 0 0 20px;
+  /* Column widths are fractions of a pixel; this keeps their rounding from widening the host page. */
+  overflow: hidden;
+}
 
 .elecuit {
   --elecuit-error: #c4320a;
   --elecuit-warning: #a15c07;
-  margin: 0 0 20px;
+  margin: 0;
+  min-width: 0;
   font:
     13px/1.5 system-ui,
     -apple-system,
@@ -18,6 +28,16 @@
     --elecuit-error: #ff8a65;
     --elecuit-warning: #f5b85c;
   }
+}
+
+.elecuit-title {
+  margin: 0 4px 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.elecuit-title .katex {
+  font-size: 1em;
 }
 
 .elecuit-viewport {
