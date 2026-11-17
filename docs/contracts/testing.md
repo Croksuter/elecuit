@@ -10,3 +10,4 @@
 - **6.** netlist의 이름과 수식이 마크업이나 링크로 주입되지 않는지는 `src/web/lib/__tests__/render.test.ts`(T1/unit, `npm test`에 포함)가 확인한다. (created by discussions/2026-11-17-security.md#통제)
 - **7.** 커밋한 `dist/elecuit.js`가 소스와 맞는지는 태그를 달기 전 `npm run build` 뒤 `git status --short dist`가 비어 있는지로 확인한다. (created by discussions/2026-11-17-security.md#통제)
 - **8.** 템플릿의 번들 주소가 `package.json`의 version을 정확히 가리키는지는 `src/web/lib/__tests__/netlist.test.ts`(T1/unit)가 확인한다. (created by discussions/2026-11-17-security.md#2026-11-17-주소-고정)
+- **9.** `README.md`의 jsDelivr 주소가 모두 `package.json`의 version을 가리키는지는 `src/web/lib/__tests__/netlist.test.ts`(T1/unit)가 확인한다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-지침-문서-배포)

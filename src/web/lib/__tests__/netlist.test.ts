@@ -1,6 +1,8 @@
 // role: checks netlist parsing and connection lint against known good and broken inputs.
 // cell: T1/unit
 
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import { lint } from "../lint";
@@ -99,5 +101,12 @@ describe("canvasPrompt", () => {
       `https://cdn.jsdelivr.net/gh/Croksuter/elecuit@${version}/dist/elecuit.js`,
     );
     expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  it("keeps every address in the README on the current version", () => {
+    const readme = readFileSync(new URL("../../../../README.md", import.meta.url), "utf8");
+    const versions = [...readme.matchAll(/elecuit@([\w.]+)\/dist\/(\w+\.\w+)/g)];
+    expect(versions.map((match) => match[2]).sort()).toEqual(["elecuit.js", "prompt.md"]);
+    expect(new Set(versions.map((match) => match[1]))).toEqual(new Set([version]));
   });
 });
