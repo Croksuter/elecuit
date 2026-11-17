@@ -1,7 +1,6 @@
 // role: draws one device symbol along an axis, upright or lying down, and the cap that ends a lead.
 
 import type { Point, Sketch } from "./drawing";
-import { isBottomRail, isTopRail } from "./netlist";
 import type { Device, DeviceKind, Terminal } from "./netlist";
 
 // Maps a position along the device axis (0 at the first pin, DEVICE_LENGTH at the second) and
@@ -12,6 +11,8 @@ const DEVICE_LENGTH = 64;
 const CAP_STUB = 12;
 // Room a cap takes beyond the end of a lead: stub, symbol and its label.
 const CAP_ZONE = 34;
+// What a ground symbol adds to that room when it carries its net's name.
+const NAMED_GROUND_ROOM = 12;
 // How far each symbol reaches from its axis on the name side.
 const BODY_HALF: Record<DeviceKind, number> = {
   nmos: 0,
@@ -178,20 +179,31 @@ function drawDevice(
   return null;
 }
 
-// Ends a lead at `point` going up (-1) or down (1): a rail symbol where the rail belongs on that
-// side, the net's name otherwise.
+// Ends a lead at `point` going up (-1) or down (1): the supply bar for a power net going up, the
+// ground symbol for a ground net going down, the net's name otherwise.
 function drawCap(sketch: Sketch, net: string, [x, y]: Point, direction: -1 | 1): void {
+  const { rails } = sketch;
   const end = y + direction * CAP_STUB;
   sketch.wire(net, [x, y], [x, end]);
-  if (net === "GND" && direction === 1) {
+  if (rails.isGround(net) && direction === 1) {
     sketch.wire(net, [x - 11, end], [x + 11, end]);
     sketch.wire(net, [x - 7, end + 5], [x + 7, end + 5]);
     sketch.wire(net, [x - 3, end + 10], [x + 3, end + 10]);
+    // One ground needs no name; several are told apart by theirs, written under the symbol.
+    if (rails.ground.length > 1) sketch.netLabel([x, end + 21], "middle", net);
     return;
   }
-  const isRailSide = (isTopRail(net) && direction === -1) || (isBottomRail(net) && direction === 1);
-  if (isRailSide) sketch.wire(net, [x - 10, end], [x + 10, end]);
+  if (rails.isPower(net) && direction === -1) sketch.wire(net, [x - 10, end], [x + 10, end]);
   sketch.netLabel([x, end + direction * 11], "middle", net);
 }
 
-export { BODY_HALF, CAP_ZONE, DEVICE_LENGTH, drawCap, drawDevice, flat, upright };
+export {
+  BODY_HALF,
+  CAP_ZONE,
+  NAMED_GROUND_ROOM,
+  DEVICE_LENGTH,
+  drawCap,
+  drawDevice,
+  flat,
+  upright,
+};

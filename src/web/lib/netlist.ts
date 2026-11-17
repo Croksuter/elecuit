@@ -73,6 +73,9 @@ interface Circuit {
   elements: Element[];
   inputs: { net: string; line: number }[];
   outputs: { net: string; line: number }[];
+  power: { net: string; line: number }[];
+  ground: { net: string; line: number }[];
+  rails: Rails;
   labels: Map<string, { tex: string; line: number }>;
 }
 
@@ -93,8 +96,6 @@ interface BlockField {
   isRequired: boolean;
 }
 
-const TOP_RAILS = ["VDD", "VCC"];
-const BOTTOM_RAILS = ["GND", "VSS", "VEE"];
 const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 const DEVICE_TERMINALS: Record<DeviceKind, { pins: [string, string]; control: string | null }> = {
@@ -172,21 +173,26 @@ const MULTI_INPUT_GATES: BlockKind[] = ["nand", "nor", "and", "or", "xor", "xnor
 const KEYWORDS = [
   "input",
   "output",
+  "power",
+  "ground",
   "label",
   ...Object.keys(DEVICE_TERMINALS),
   ...Object.keys(BLOCK_FIELDS),
 ];
 
-function isTopRail(net: string): boolean {
-  return TOP_RAILS.includes(net);
-}
+// The nets a netlist declares as supplies: `power` nets are always at 1 and drawn at the top,
+// `ground` nets always at 0 and drawn at the bottom. No name is a supply unless declared.
+class Rails {
+  constructor(
+    readonly power: readonly string[],
+    readonly ground: readonly string[],
+  ) {}
 
-function isBottomRail(net: string): boolean {
-  return BOTTOM_RAILS.includes(net);
-}
+  isPower = (net: string): boolean => this.power.includes(net);
 
-function isRail(net: string): boolean {
-  return isTopRail(net) || isBottomRail(net);
+  isGround = (net: string): boolean => this.ground.includes(net);
+
+  has = (net: string): boolean => this.isPower(net) || this.isGround(net);
 }
 
 // Splits a line on whitespace, keeping `$…$` spans (and `key=$…$`) as one token.
@@ -244,7 +250,7 @@ function selectSourceLines(text: string): { text: string; line: number }[] {
 // A keeper holds a node at the rail it already sits at: a pull-up or pull-down whose gate is that
 // node inverted. It can only work if it is weaker than whatever else drives the node, so it is
 // taken as weak even when the netlist does not say so.
-function markKeepers(elements: Element[]): void {
+function markKeepers(elements: Element[], rails: Rails): void {
   const mos = elements.filter(
     (element): element is Device =>
       element.type === "device" && (element.kind === "nmos" || element.kind === "pmos"),
@@ -266,14 +272,14 @@ function markKeepers(elements: Element[]): void {
           device.pins.some((pin) => pin.net === output) &&
           device.pins.some((pin) => isRailSide(pin.net)),
       );
-    return hasBlock || (pulls("pmos", isTopRail) && pulls("nmos", isBottomRail));
+    return hasBlock || (pulls("pmos", rails.isPower) && pulls("nmos", rails.isGround));
   }
   for (const device of mos) {
     if (device.isWeak) continue;
-    const node = device.pins.find((pin) => !isRail(pin.net));
-    const rail = device.pins.find((pin) => isRail(pin.net));
+    const node = device.pins.find((pin) => !rails.has(pin.net));
+    const rail = device.pins.find((pin) => rails.has(pin.net));
     if (!node || !rail || node.net === device.control!.net) continue;
-    const isHolding = (device.kind === "pmos") === isTopRail(rail.net);
+    const isHolding = (device.kind === "pmos") === rails.isPower(rail.net);
     if (isHolding && isInverted(node.net, device.control!.net)) {
       device.isWeak = true;
       device.isAssumedWeak = true;
@@ -282,7 +288,15 @@ function markKeepers(elements: Element[]): void {
 }
 
 function parse(text: string): ParseResult {
-  const circuit: Circuit = { elements: [], inputs: [], outputs: [], labels: new Map() };
+  const circuit: Circuit = {
+    elements: [],
+    inputs: [],
+    outputs: [],
+    power: [],
+    ground: [],
+    rails: new Rails([], []),
+    labels: new Map(),
+  };
   const diagnostics: Diagnostic[] = [];
   const names = new Map<string, number>();
 
@@ -382,11 +396,25 @@ function parse(text: string): ParseResult {
       for (const value of rest) {
         const net = readNet(line, value, keyword);
         if (net === null) continue;
-        if (isRail(net)) {
-          error(line, `${keyword}: ${net}는 전원 레일이라 ${keyword}로 선언할 수 없습니다.`);
+        (keyword === "input" ? circuit.inputs : circuit.outputs).push({ net, line });
+      }
+      continue;
+    }
+
+    if (keyword === "power" || keyword === "ground") {
+      if (rest.length === 0) error(line, `${keyword} 뒤에 노드 이름이 필요합니다.`);
+      for (const value of rest) {
+        const net = readNet(line, value, keyword);
+        if (net === null) continue;
+        const earlier = [...circuit.power, ...circuit.ground].find((entry) => entry.net === net);
+        if (earlier) {
+          error(
+            line,
+            `${keyword}: ${net}는 이미 ${earlier.line}행에서 전원이나 접지로 선언했습니다.`,
+          );
           continue;
         }
-        (keyword === "input" ? circuit.inputs : circuit.outputs).push({ net, line });
+        circuit[keyword].push({ net, line });
       }
       continue;
     }
@@ -508,17 +536,38 @@ function parse(text: string): ParseResult {
       error(line, `${name}: in이나 out에 노드가 하나는 있어야 합니다.`);
       continue;
     }
-    const railOutput = outputs.find((terminal) => isRail(terminal.net));
-    if (railOutput) {
-      error(line, `${name}: 출력을 ${railOutput.net}에 연결할 수 없습니다.`);
-      continue;
-    }
     circuit.elements.push({ type: "block", kind, name, line, inputs, outputs, title });
   }
 
-  markKeepers(circuit.elements);
+  // Declarations may come anywhere, so what depends on them is settled after the last line.
+  const rails = new Rails(
+    circuit.power.map((entry) => entry.net),
+    circuit.ground.map((entry) => entry.net),
+  );
+  circuit.rails = rails;
+  for (const keyword of ["input", "output"] as const) {
+    const list = keyword === "input" ? circuit.inputs : circuit.outputs;
+    for (const entry of list.filter((declared) => rails.has(declared.net))) {
+      error(
+        entry.line,
+        `${keyword}: ${entry.net}는 전원이나 접지라 ${keyword}로 선언할 수 없습니다.`,
+      );
+      list.splice(list.indexOf(entry), 1);
+    }
+  }
+  circuit.elements = circuit.elements.filter((element) => {
+    const railOutput =
+      element.type === "block"
+        ? element.outputs.find((output) => rails.has(output.net))
+        : undefined;
+    if (railOutput)
+      error(element.line, `${element.name}: 출력을 ${railOutput.net}에 연결할 수 없습니다.`);
+    return !railOutput;
+  });
+  markKeepers(circuit.elements, rails);
+  diagnostics.sort((left, right) => left.line - right.line);
   return { circuit, diagnostics };
 }
 
 export type { Block, Caption, Circuit, Device, DeviceKind, Diagnostic, Element, Terminal };
-export { isBottomRail, isRail, isTopRail, parse };
+export { parse, Rails };

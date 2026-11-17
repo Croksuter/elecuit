@@ -18,3 +18,4 @@
 - **14.** `$…$` 없이 쓴 `value`와 `title`이 마크업으로 주입되지 않는지는 `src/web/lib/__tests__/render.test.ts`(T1/unit)가 확인한다. (created by discussions/2026-11-17-security.md#2026-11-17-소자-값과-블록-제목)
 - **15.** 논리 값 계산은 `src/web/lib/__tests__/simulate.test.ts`(T1/unit)가 확인한다. 게이트, CMOS NAND, domino의 precharge·evaluate·전하 공유, 약한 keeper, 저항 pull-up, 플립플롭과 MUX, NOR 래치, 정해지지 않는 고리, 아날로그 소자, ALU를 본다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-입력을-눌러-동작-보기)
 - **16.** 사용자가 보낸 MUX형 ALU(`src/web/lib/__tests__/fixtures/alu-mux.txt`)는 64가지 입력 조합마다 F, Q, L, SUM, CO, EQ를 식의 값과 대조하고(`simulate.test.ts`), 배치 검사의 대표 회로에도 넣는다(`layout.test.ts`). (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-keeper-판정-입력-해제-호버-강조)
+- **17.** 짧은 테스트 netlist는 `src/web/lib/__tests__/support.ts`의 `withRails`가 쓰인 전원 이름(`VDD`, `VCC`, `GND`, `VSS`, `VEE`)의 선언 줄을 끝에 붙인 뒤 읽는다. 선언 자체를 보는 테스트와 자료 파일은 줄을 직접 적는다. (created by discussions/2026-11-17-elecuit-start.md#2026-11-17-전원과-접지는-선언으로만)

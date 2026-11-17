@@ -5,7 +5,7 @@ import { layout } from "./lib/layout";
 import type { LabelKind, Measure } from "./lib/drawing";
 import { collectNetUses, lint } from "./lib/lint";
 import type { NetUse } from "./lib/lint";
-import { isRail, parse } from "./lib/netlist";
+import { parse } from "./lib/netlist";
 import type { Circuit, Diagnostic } from "./lib/netlist";
 import { render, renderLabelContent } from "./lib/render";
 import { Simulator } from "./lib/simulate";
@@ -121,6 +121,7 @@ function createLogic(stage: HTMLElement, panel: HTMLElement, onChange: () => voi
   let simulator: Simulator | null = null;
   let devices: Circuit["elements"] = [];
   let labels: Circuit["labels"] = new Map();
+  let rails: Circuit["rails"] | null = null;
   let loaded: string | null = null;
   // The levels the viewer chose, in the order chosen; they outlive a redraw.
   const chosen = new Map<string, 0 | 1>();
@@ -132,7 +133,7 @@ function createLogic(stage: HTMLElement, panel: HTMLElement, onChange: () => voi
     const isDigital = simulator.inputs.length > 0;
     for (const node of stage.querySelectorAll("[data-net]")) {
       const net = node.getAttribute("data-net")!;
-      const level = isDigital || isRail(net) ? simulator.levelOf(net) : null;
+      const level = isDigital || rails?.has(net) ? simulator.levelOf(net) : null;
       if (level === null) node.removeAttribute("data-level");
       else node.setAttribute("data-level", String(level));
       node.classList.toggle("settable", simulator.inputs.includes(net));
@@ -202,6 +203,7 @@ function createLogic(stage: HTMLElement, panel: HTMLElement, onChange: () => voi
         simulator = new Simulator(circuit);
         devices = circuit.elements;
         labels = circuit.labels;
+        rails = circuit.rails;
         loaded = source;
         for (const net of [...chosen.keys()]) {
           if (!simulator.inputs.includes(net)) chosen.delete(net);
@@ -226,7 +228,7 @@ function createLogic(stage: HTMLElement, panel: HTMLElement, onChange: () => voi
         : simulator.isFoughtOver(net)
           ? "모름 (0으로 당기는 경로와 1로 당기는 경로가 함께 켜짐)"
           : "모름";
-      if (simulator.inputs.length > 0 || isRail(net)) {
+      if (simulator.inputs.length > 0 || rails?.has(net)) {
         parts.push(`값 ${simulator.levelOf(net) ?? unknown}`);
       }
       if (simulator.inputs.includes(net)) parts.push("누르면 0 → 1 → 해제");

@@ -2,12 +2,12 @@
 
 import { isBoxFree, labelBox, obstaclesOf } from "./drawing";
 import type { Point, Sketch } from "./drawing";
-import { isBottomRail, isRail, isTopRail } from "./netlist";
-import type { Device, Terminal } from "./netlist";
+import type { Device, Rails, Terminal } from "./netlist";
 import type { Pin } from "./place";
 import {
   BODY_HALF,
   CAP_ZONE,
+  NAMED_GROUND_ROOM,
   DEVICE_LENGTH,
   drawCap,
   drawDevice,
@@ -65,11 +65,13 @@ const CONTROL_PULL = 1.5;
 
 // Without a supply rail the top of the drawing is the node a voltage source lifts above the
 // bottom rail, or else the node farthest from the bottom rail.
-function findStandInTops(devices: Device[], nodes: string[]): string[] {
+function findStandInTops(devices: Device[], nodes: string[], rails: Rails): string[] {
   const lifted = devices
     .filter(
       (device) =>
-        device.kind === "vsrc" && !isRail(device.pins[0].net) && isBottomRail(device.pins[1].net),
+        device.kind === "vsrc" &&
+        !rails.has(device.pins[0].net) &&
+        rails.isGround(device.pins[1].net),
     )
     .map((device) => device.pins[0].net);
   if (lifted.length > 0) return [...new Set(lifted)];
@@ -77,8 +79,8 @@ function findStandInTops(devices: Device[], nodes: string[]): string[] {
   const distance = new Map<string, number>();
   let frontier = devices.flatMap((device) => {
     const [first, second] = device.pins.map((pin) => pin.net);
-    if (isBottomRail(first) && !isRail(second)) return [second];
-    if (isBottomRail(second) && !isRail(first)) return [first];
+    if (rails.isGround(first) && !rails.has(second)) return [second];
+    if (rails.isGround(second) && !rails.has(first)) return [first];
     return [];
   });
   for (let step = 1; frontier.length > 0; step++) {
@@ -89,7 +91,7 @@ function findStandInTops(devices: Device[], nodes: string[]): string[] {
       for (const device of devices) {
         const nets = device.pins.map((pin) => pin.net);
         if (!nets.includes(net)) continue;
-        next.push(...nets.filter((other) => !isRail(other) && !distance.has(other)));
+        next.push(...nets.filter((other) => !rails.has(other) && !distance.has(other)));
       }
     }
     frontier = next;
@@ -114,15 +116,15 @@ function findStandInTops(devices: Device[], nodes: string[]): string[] {
 
 // Treats every device as a unit conductance between top rails at 1 and bottom rails at 0 and
 // solves the node potentials; their order is the top-to-bottom order of the drawing.
-function solvePotentials(devices: Device[], nodes: string[]): Map<string, number> {
+function solvePotentials(devices: Device[], nodes: string[], rails: Rails): Map<string, number> {
   const potentials = new Map(nodes.map((net) => [net, 0]));
   const nets = devices.flatMap((device) => device.pins.map((pin) => pin.net));
-  const hasTop = nets.some(isTopRail);
-  if (nodes.length === 0 || (!hasTop && !nets.some(isBottomRail))) return potentials;
+  const hasTop = nets.some(rails.isPower);
+  if (nodes.length === 0 || (!hasTop && !nets.some(rails.isGround))) return potentials;
 
   const fixed = new Map<string, number>();
-  for (const net of nets) if (isRail(net)) fixed.set(net, isTopRail(net) ? 1 : 0);
-  if (!hasTop) for (const net of findStandInTops(devices, nodes)) fixed.set(net, 1);
+  for (const net of nets) if (rails.has(net)) fixed.set(net, rails.isPower(net) ? 1 : 0);
+  if (!hasTop) for (const net of findStandInTops(devices, nodes, rails)) fixed.set(net, 1);
 
   const unknowns = nodes.filter((net) => !fixed.has(net));
   const rowOf = new Map(unknowns.map((net, row) => [net, row]));
@@ -169,8 +171,8 @@ function solvePotentials(devices: Device[], nodes: string[]): Map<string, number
 
 // Gives each node a line number, 1 at the top. Nodes joined by a device at the same potential
 // share a line; every other device runs from a higher line to a lower one.
-function assignLevels(devices: Device[], nodes: string[]): Map<string, number> {
-  const potentials = solvePotentials(devices, nodes);
+function assignLevels(devices: Device[], nodes: string[], rails: Rails): Map<string, number> {
+  const potentials = solvePotentials(devices, nodes, rails);
   const parent = new Map(nodes.map((net) => [net, net]));
   function find(net: string): string {
     while (parent.get(net) !== net) net = parent.get(net)!;
@@ -178,7 +180,7 @@ function assignLevels(devices: Device[], nodes: string[]): Map<string, number> {
   }
   const edges = devices
     .map((device) => device.pins.map((pin) => pin.net))
-    .filter(([first, second]) => first !== second && !isRail(first) && !isRail(second));
+    .filter(([first, second]) => first !== second && !rails.has(first) && !rails.has(second));
   for (const [first, second] of edges) {
     if (Math.abs(potentials.get(first)! - potentials.get(second)!) < LEVEL_TOLERANCE) {
       parent.set(find(first), find(second));
@@ -205,7 +207,7 @@ function assignLevels(devices: Device[], nodes: string[]): Map<string, number> {
   return new Map(nodes.map((net) => [net, levelOfRoot.get(find(net))!]));
 }
 
-function buildItems(devices: Device[], levels: Map<string, number>): Item[] {
+function buildItems(devices: Device[], levels: Map<string, number>, rails: Rails): Item[] {
   const uprights: Upright[] = [];
   const flats = new Map<string, { level: number; nets: [string, string]; devices: Device[] }>();
   const loose: Device[] = [];
@@ -214,8 +216,8 @@ function buildItems(devices: Device[], levels: Map<string, number>): Item[] {
     const [first, second] = device.pins;
     const isSameSide =
       first.net === second.net ||
-      (isTopRail(first.net) && isTopRail(second.net)) ||
-      (isBottomRail(first.net) && isBottomRail(second.net));
+      (rails.isPower(first.net) && rails.isPower(second.net)) ||
+      (rails.isGround(first.net) && rails.isGround(second.net));
     if (isSameSide) {
       loose.push(device);
       continue;
@@ -234,10 +236,10 @@ function buildItems(devices: Device[], levels: Map<string, number>): Item[] {
       continue;
     }
     const rank = (net: string): number =>
-      isTopRail(net) ? -1 : isBottomRail(net) ? Infinity : levels.get(net)!;
+      rails.isPower(net) ? -1 : rails.isGround(net) ? Infinity : levels.get(net)!;
     const [upper, lower] = rank(first.net) <= rank(second.net) ? [first, second] : [second, first];
-    const hasTopCap = isRail(upper.net);
-    const hasBottomCap = isRail(lower.net);
+    const hasTopCap = rails.has(upper.net);
+    const hasBottomCap = rails.has(lower.net);
     const topLine = hasTopCap
       ? hasBottomCap
         ? 0
@@ -473,13 +475,16 @@ function splitIntoFragments(
 
 // Draws the cluster into the sketch and returns the points other parts of the circuit may wire to.
 function layoutNetwork(devices: Device[], sketch: Sketch): Pin[] {
+  const { rails } = sketch;
   const nodes = [
     ...new Set(
-      devices.flatMap((device) => device.pins.map((pin) => pin.net)).filter((net) => !isRail(net)),
+      devices
+        .flatMap((device) => device.pins.map((pin) => pin.net))
+        .filter((net) => !rails.has(net)),
     ),
   ];
-  const levels = assignLevels(devices, nodes);
-  const items = buildItems(devices, levels);
+  const levels = assignLevels(devices, nodes, rails);
+  const items = buildItems(devices, levels, rails);
   const order = orderItems(items, levels);
   const fragments = splitIntoFragments(items, order, levels);
   const pins: Pin[] = [];
@@ -539,7 +544,9 @@ function layoutNetwork(devices: Device[], sketch: Sketch): Pin[] {
     );
     const hasLoose = gap === 1 && items.some((item) => item.type === "loose");
     const top = hasLoose || bodies.some((upright) => upright.hasTopCap) ? CAP_ZONE : 0;
-    const bottom = hasLoose || bodies.some((upright) => upright.hasBottomCap) ? CAP_ZONE : 0;
+    const groundRoom = rails.ground.length > 1 ? NAMED_GROUND_ROOM : 0;
+    const bottom =
+      hasLoose || bodies.some((upright) => upright.hasBottomCap) ? CAP_ZONE + groundRoom : 0;
     let height = bodies.length > 0 || hasLoose ? top + DEVICE_LENGTH + bottom : 0;
     for (const item of items) {
       if (item.type !== "flat") continue;

@@ -10,6 +10,8 @@ import { EXAMPLE } from "../prompt";
 import { Simulator } from "../simulate";
 import type { Level } from "../simulate";
 
+import { withRails } from "./support";
+
 const ALU = readFileSync(new URL("./fixtures/alu.txt", import.meta.url), "utf8");
 const ALU_MUX = readFileSync(new URL("./fixtures/alu-mux.txt", import.meta.url), "utf8");
 
@@ -23,7 +25,7 @@ inv  I1 in=Y  out=Z
 `;
 
 function simulate(text: string): Simulator {
-  const { circuit, diagnostics } = parse(text);
+  const { circuit, diagnostics } = parse(withRails(text));
   expect(diagnostics).toEqual([]);
   return new Simulator(circuit);
 }

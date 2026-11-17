@@ -9,9 +9,10 @@ import { labelBox, overlaps } from "../drawing";
 import type { Box, Drawing, Primitive } from "../drawing";
 import { layout } from "../layout";
 import { parse } from "../netlist";
-import type { Device } from "../netlist";
 import { assignLevels } from "../network";
 import { EXAMPLE } from "../prompt";
+
+import { withRails } from "./support";
 
 type Segment = { net: string; box: Box };
 
@@ -23,7 +24,7 @@ function measure(text: string): { width: number; height: number } {
 }
 
 function draw(text: string): Drawing {
-  const { circuit, diagnostics } = parse(text);
+  const { circuit, diagnostics } = parse(withRails(text));
   expect(diagnostics).toEqual([]);
   return layout(circuit, measure);
 }
@@ -88,16 +89,13 @@ function unnamedPieces(drawing: Drawing): string[] {
   return unnamed;
 }
 
-function devicesOf(text: string): Device[] {
-  return parse(text).circuit.elements.filter((element) => element.type === "device");
-}
-
 function levelsOf(text: string): Record<string, number> {
-  const devices = devicesOf(text);
+  const { circuit } = parse(withRails(text));
+  const devices = circuit.elements.filter((element) => element.type === "device");
   const nodes = [...new Set(devices.flatMap((device) => device.pins.map((pin) => pin.net)))].filter(
-    (net) => !["VDD", "VCC", "GND", "VSS", "VEE"].includes(net),
+    (net) => !circuit.rails.has(net),
   );
-  return Object.fromEntries(assignLevels(devices, nodes));
+  return Object.fromEntries(assignLevels(devices, nodes, circuit.rails));
 }
 
 const CIRCUITS: Record<string, string> = {
@@ -223,7 +221,7 @@ function randomCircuit(seed: number): string {
   }
   const pool = ["VDD", "GND", "VSS", "a", "b", "c", "d", "e", "f"];
   const net = (): string => pool[next(pool.length)];
-  const lines: string[] = [];
+  const lines: string[] = ["power VDD", "ground GND VSS"];
   const deviceCount = 2 + next(12);
   for (let index = 0; index < deviceCount; index++) {
     const kind = ["nmos", "pmos", "npn", "res", "cap", "ind", "diode", "vsrc", "isrc"][next(9)];

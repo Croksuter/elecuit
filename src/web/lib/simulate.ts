@@ -1,7 +1,6 @@
 // role: works out the logic level of every net for chosen input levels: gates, flip-flops, MOS switches.
 
-import { isBottomRail, isRail, isTopRail } from "./netlist";
-import type { Block, Circuit, Device } from "./netlist";
+import type { Block, Circuit, Device, Rails } from "./netlist";
 
 // null means unknown: the level cannot be told from what is known.
 type Level = 0 | 1 | null;
@@ -71,6 +70,7 @@ class Simulator {
   // The nets a user may set, in the order the netlist first names them.
   readonly inputs: string[];
 
+  private readonly rails: Rails;
   private readonly devices: Device[];
   private readonly blocks: Block[];
   private readonly nets: string[];
@@ -84,6 +84,7 @@ class Simulator {
   private fought = new Set<string>();
 
   constructor(circuit: Circuit) {
+    this.rails = circuit.rails;
     this.devices = circuit.elements.filter((element) => element.type === "device");
     this.blocks = circuit.elements.filter((element) => element.type === "block");
     const pinNets = this.devices.flatMap((device) => device.pins.map((pin) => pin.net));
@@ -94,7 +95,9 @@ class Simulator {
     const driven = new Set(
       this.blocks.flatMap((block) => block.outputs.map((output) => output.net)),
     );
-    this.nets = [...new Set([...pinNets, ...readNets, ...driven])].filter((net) => !isRail(net));
+    this.nets = [...new Set([...pinNets, ...readNets, ...driven])].filter(
+      (net) => !this.rails.has(net),
+    );
     this.analogNets = new Set(
       this.devices
         .filter((device) => ANALOG_KINDS.includes(device.kind))
@@ -104,14 +107,14 @@ class Simulator {
     const declared = circuit.inputs.map((entry) => entry.net);
     const onlyRead = readNets.filter((net) => !pinNets.includes(net));
     this.inputs = [...new Set([...declared, ...onlyRead])].filter(
-      (net) => !isRail(net) && !driven.has(net) && !this.analogNets.has(net),
+      (net) => !this.rails.has(net) && !driven.has(net) && !this.analogNets.has(net),
     );
     this.settle();
   }
 
   levelOf(net: string): Level {
-    if (isTopRail(net)) return 1;
-    if (isBottomRail(net)) return 0;
+    if (this.rails.isPower(net)) return 1;
+    if (this.rails.isGround(net)) return 0;
     return this.assigned.get(net) ?? this.values.get(net) ?? null;
   }
 
@@ -183,9 +186,9 @@ class Simulator {
       if (device.kind !== "nmos" && device.kind !== "pmos") return [];
       return [{ ends, strength: device.isWeak ? "weak" : "strong", isOn: this.conducts(device) }];
     });
-    const isSource = (net: string): boolean => isRail(net) || sources.has(net);
+    const isSource = (net: string): boolean => this.rails.has(net) || sources.has(net);
     const sourceLevel = (net: string): Level =>
-      isTopRail(net) ? 1 : isBottomRail(net) ? 0 : (sources.get(net) ?? null);
+      this.rails.isPower(net) ? 1 : this.rails.isGround(net) ? 0 : (sources.get(net) ?? null);
     const allNets = [...new Set([...this.nets, ...links.flatMap((link) => link.ends)])];
 
     // The nets a level spreads to from `starts` across the links that `crosses` allows; a level
@@ -287,7 +290,7 @@ class Simulator {
         // The flip-flop takes the level its input had before this change reached the clock.
         const input = block.inputs.find((entry) => entry.key === "d")!.net;
         const sampled =
-          isRail(input) || this.assigned.has(input) ? data : (before.get(input) ?? null);
+          this.rails.has(input) || this.assigned.has(input) ? data : (before.get(input) ?? null);
         const isEdge = state.clock === 0 && clock === 1;
         const isMaybeEdge =
           (state.clock === null && clock === 1) || (state.clock === 0 && clock === null);
