@@ -1,7 +1,7 @@
 # elecuit
 
 - **무엇.** LLM이 좌표 대신 netlist로 회로를 쓰게 하고, 그 netlist를 겹침 없는 회로도로 그리는 단일 웹 페이지와, 채팅의 HTML 미리보기 안에서 같은 회로도를 그리는 임베드 스크립트.
-- **명령.** `npm run dev`, `npm test`, `npm run check`, `npm run build`(결과: 페이지 `dist/index.html`, 임베드 `dist/elecuit.js`).
+- **명령.** `npm run dev`, `npm test`, `npm run check`, `npm run build`(결과: 페이지 `dist/index.html`, 임베드 `dist/elecuit.js`, 모델이 주소로 읽는 지침 `dist/prompt.md`).
 
 ## 디자인
 

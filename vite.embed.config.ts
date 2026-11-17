@@ -1,5 +1,14 @@
-// role: builds the embed bundle, one script that draws netlist blocks inside any host page.
+// role: builds the embed bundle and the instruction document a chat model reads by address.
 import { defineConfig } from "vite";
+
+import { canvasPrompt, EMBED_SCRIPT_URL } from "./src/web/lib/prompt";
+
+const PROMPT_DOCUMENT = `# elecuit 회로도 지침
+
+사용자가 이 문서의 주소를 주면서 회로도를 그리라고 하면, 그 대화가 끝날 때까지 아래 지침을 따릅니다.
+
+${canvasPrompt(EMBED_SCRIPT_URL)}
+`;
 
 export default defineConfig({
   build: {
@@ -12,4 +21,12 @@ export default defineConfig({
       fileName: () => "elecuit.js",
     },
   },
+  plugins: [
+    {
+      name: "elecuit-prompt-document",
+      generateBundle() {
+        this.emitFile({ type: "asset", fileName: "prompt.md", source: PROMPT_DOCUMENT });
+      },
+    },
+  ],
 });
