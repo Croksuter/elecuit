@@ -1,17 +1,22 @@
 // role: wires the editor, diagnostics, schematic canvas, zoom and export controls of the page.
 
 import "katex/dist/katex.min.css";
+import "./schematic.css";
 import "./index.css";
 
 import { toPng, toSvg } from "html-to-image";
 
-import { layout } from "./lib/layout";
-import type { LabelKind } from "./lib/layout";
-import { collectNetUses, lint } from "./lib/lint";
-import { parse } from "./lib/netlist";
+import type { NetUse } from "./lib/lint";
 import type { Diagnostic } from "./lib/netlist";
 import { EXAMPLE, PROMPT } from "./lib/prompt";
-import { render, renderLabelContent } from "./lib/render";
+import {
+  createMeasurer,
+  describeNet,
+  drawSchematic,
+  highlightNet,
+  onFontsLoaded,
+  watchNets,
+} from "./schematic";
 
 const STORAGE_KEY = "elecuit.source";
 const ZOOM_STEP = 1.25;
@@ -35,24 +40,8 @@ const notesView = element<HTMLSpanElement>("notes");
 const zoomValue = element<HTMLSpanElement>("zoom-value");
 const toast = element<HTMLDivElement>("toast");
 
-const measureHost = document.createElement("div");
-measureHost.className = "measure";
-document.body.append(measureHost);
-const measureCache = new Map<string, { width: number; height: number }>();
-
-function measure(text: string, isTex: boolean, kind: LabelKind): { width: number; height: number } {
-  const key = `${kind}|${isTex}|${text}`;
-  const cached = measureCache.get(key);
-  if (cached) return cached;
-  const probe = document.createElement("div");
-  probe.className = `label label-${kind}`;
-  probe.innerHTML = renderLabelContent(text, isTex);
-  measureHost.append(probe);
-  const size = { width: Math.ceil(probe.offsetWidth), height: Math.ceil(probe.offsetHeight) };
-  probe.remove();
-  measureCache.set(key, size);
-  return size;
-}
+const HOVER_HINT = "노드에 마우스를 올리면 연결된 단자가 보입니다.";
+const measurer = createMeasurer();
 
 function loadSource(): string {
   try {
@@ -72,7 +61,7 @@ function saveSource(text: string): void {
 
 let zoom = 1;
 let isFitting = true;
-let netUses = new Map<string, { where: string }[]>();
+let netUses = new Map<string, NetUse[]>();
 let toastTimer = 0;
 
 function showToast(message: string): void {
@@ -144,23 +133,14 @@ function renderDiagnostics(diagnostics: Diagnostic[]): void {
 function update(): void {
   const text = source.value;
   saveSource(text);
-  const { circuit, diagnostics: syntax } = parse(text);
-  const diagnostics = [...syntax, ...lint(circuit)].sort((left, right) => left.line - right.line);
-  renderGutter(text, diagnostics);
-  renderDiagnostics(diagnostics);
-  netUses = collectNetUses(circuit);
-
-  const hasElements = circuit.elements.length > 0;
-  empty.hidden = hasElements;
-  stage.hidden = !hasElements;
-  if (!hasElements) {
-    stage.innerHTML = "";
-    notesView.textContent = "";
-    return;
-  }
-  const drawing = layout(circuit, measure);
-  stage.innerHTML = render(drawing);
-  notesView.textContent = drawing.notes.join(" ");
+  const schematic = drawSchematic(stage, text, measurer.measure);
+  renderGutter(text, schematic.diagnostics);
+  renderDiagnostics(schematic.diagnostics);
+  netUses = schematic.netUses;
+  empty.hidden = schematic.hasElements;
+  stage.hidden = !schematic.hasElements;
+  notesView.textContent = schematic.notes.join(" ");
+  hoverInfo.textContent = HOVER_HINT;
   applyZoom();
 }
 
@@ -173,20 +153,8 @@ function selectLine(line: number): void {
   source.scrollTop = Math.max(0, (line - 3) * lineHeight);
 }
 
-function setHighlight(net: string | null): void {
-  for (const node of stage.querySelectorAll(".on")) node.classList.remove("on");
-  stage.classList.toggle("focusing", net !== null);
-  if (net === null) {
-    hoverInfo.textContent = "노드에 마우스를 올리면 연결된 단자가 보입니다.";
-    return;
-  }
-  for (const node of stage.querySelectorAll(`[data-net="${CSS.escape(net)}"]`))
-    node.classList.add("on");
-  const uses = netUses.get(net) ?? [];
-  hoverInfo.innerHTML = "";
-  const name = document.createElement("strong");
-  name.textContent = net;
-  hoverInfo.append(name, ` · ${uses.length}곳: ${uses.map((use) => use.where).join(", ")}`);
+function showNet(net: string | null): void {
+  hoverInfo.textContent = net === null ? HOVER_HINT : describeNet(net, netUses.get(net) ?? []);
 }
 
 async function copyText(text: string, message: string): Promise<void> {
@@ -204,7 +172,7 @@ async function exportSheet(kind: "svg" | "png"): Promise<void> {
     showToast("내보낼 회로도가 없습니다.");
     return;
   }
-  setHighlight(null);
+  highlightNet(stage, null);
   const options = {
     backgroundColor: "#ffffff",
     pixelRatio: 3,
@@ -251,11 +219,7 @@ diagnosticsList.addEventListener("click", (event) => {
   if (button) selectLine(Number(button.dataset.line));
 });
 
-stage.addEventListener("pointerover", (event) => {
-  const target = (event.target as Element).closest("[data-net]");
-  setHighlight(target ? target.getAttribute("data-net") : null);
-});
-stage.addEventListener("pointerleave", () => setHighlight(null));
+watchNets(stage, showNet);
 
 element("zoom-in").addEventListener("click", () => {
   isFitting = false;
@@ -283,9 +247,8 @@ for (const id of ["load-example", "empty-example"])
   element(id).addEventListener("click", loadExample);
 new ResizeObserver(() => applyZoom()).observe(canvas);
 
-// KaTeX fonts must be ready before labels are measured, or widths come out short.
-void document.fonts.ready.then(() => {
-  measureCache.clear();
+onFontsLoaded(() => {
+  measurer.reset();
   update();
 });
 update();

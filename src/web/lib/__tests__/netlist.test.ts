@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { lint } from "../lint";
 import { parse } from "../netlist";
-import { EXAMPLE } from "../prompt";
+import { canvasPrompt, EXAMPLE } from "../prompt";
 
 function messages(text: string): string[] {
   const { circuit, diagnostics } = parse(text);
@@ -79,5 +79,17 @@ describe("lint", () => {
     const result = messages(text);
     expect(result).toContain("3:error:I2: 출력 Z를 I1도 구동합니다.");
     expect(result.some((entry) => entry.startsWith("4:error:KaTeX 수식"))).toBe(true);
+  });
+});
+
+describe("canvasPrompt", () => {
+  it("gives a template whose netlist block is clean and whose script comes last", () => {
+    const prompt = canvasPrompt("https://example.test/elecuit.js");
+    const block = /<script type="text\/elecuit">\n([\s\S]*?)<\/script>/.exec(prompt);
+    expect(block).not.toBeNull();
+    expect(messages(block![1])).toEqual([]);
+    expect(prompt.indexOf('<script src="https://example.test/elecuit.js">')).toBeGreaterThan(
+      block!.index,
+    );
   });
 });

@@ -18,9 +18,6 @@
   --ok: #067647;
   --desk: #e9ebef;
   --grid: #d7dbe2;
-  --paper-ink: #1b1f24;
-  --paper-muted: #7a8494;
-  --paper-accent: #2459d6;
   --font-ui:
     system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-code: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -418,114 +415,9 @@ code {
   padding: 56px 24px 24px;
 }
 
-.stage {
-  position: relative;
-}
-
 .stage[hidden],
 .empty[hidden] {
   display: none;
-}
-
-.sheet {
-  position: relative;
-  transform-origin: 0 0;
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow:
-    0 1px 2px rgb(16 24 40 / 8%),
-    0 8px 24px rgb(16 24 40 / 8%);
-  color: var(--paper-ink);
-}
-
-.sheet svg {
-  position: absolute;
-  inset: 0;
-  overflow: visible;
-}
-
-.sheet .wire,
-.sheet .body {
-  fill: none;
-  stroke: var(--paper-ink);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.sheet .body {
-  stroke-width: 1.8;
-}
-
-.sheet .body.heavy {
-  stroke-width: 2.6;
-}
-
-.sheet .hit {
-  fill: none;
-  stroke: transparent;
-  stroke-width: 10;
-  pointer-events: stroke;
-}
-
-.sheet .bubble {
-  fill: #ffffff;
-  stroke: var(--paper-ink);
-  stroke-width: 1.5;
-}
-
-.sheet .dot {
-  fill: var(--paper-ink);
-}
-
-.label {
-  position: absolute;
-  white-space: nowrap;
-  line-height: 1;
-  color: var(--paper-ink);
-}
-
-.label-net {
-  font-size: 15px;
-}
-
-.label-name {
-  font: 11px var(--font-ui);
-  color: var(--paper-muted);
-}
-
-.label-value {
-  font-size: 14px;
-}
-
-.label .katex {
-  font-size: 1em;
-}
-
-.stage.focusing .wire,
-.stage.focusing .dot {
-  opacity: 0.22;
-}
-
-.stage.focusing .label[data-net] {
-  opacity: 0.35;
-}
-
-.stage .wire.on,
-.stage .dot.on {
-  opacity: 1;
-  stroke: var(--paper-accent);
-  fill: var(--paper-accent);
-  stroke-width: 2.4;
-}
-
-.stage .wire.on {
-  fill: none;
-}
-
-.stage .label.on {
-  opacity: 1;
-  color: var(--paper-accent);
 }
 
 .empty {
@@ -563,21 +455,9 @@ code {
   white-space: nowrap;
 }
 
-.hover-info strong {
-  color: var(--ink);
-  font-family: var(--font-code);
-}
-
 .notes {
   color: var(--warning);
   text-align: right;
-}
-
-.measure {
-  position: absolute;
-  left: -10000px;
-  top: 0;
-  visibility: hidden;
 }
 
 .toast {

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>elecuit embed demo</title>
+  </head>
+  <body style="max-width: 720px; margin: 24px auto; padding: 0 16px; font-family: system-ui">
+    <p>개선 회로: X를 precharge하는 PMOS를 더했습니다.</p>
+    <script type="text/elecuit">
+      input  A B phi
+      output Z
+      label  phi $\phi$
+      pmos P1 g=phi d=Y  s=VDD
+      nmos N1 g=A   d=Y  s=X
+      nmos N2 g=B   d=X  s=n1
+      nmos N3 g=phi d=n1 s=GND
+      pmos P2 g=phi d=X  s=VDD
+      inv  I1 in=Y  out=Z
+    </script>
+    <p>오류가 있는 netlist는 아래처럼 행 번호와 함께 보입니다.</p>
+    <script type="text/elecuit">
+      nmos N1 g=A d=Y s=X
+      nmos N2 g=B d=x s=GND
+      pmos P1 g=A d=Y
+    </script>
+    <script src="../dist/elecuit.js"></script>
+  </body>
+</html>
