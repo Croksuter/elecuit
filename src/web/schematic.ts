@@ -1,5 +1,6 @@
 // role: draws a netlist into a stage element in the browser: label measuring, rendering, net hover, logic levels, zoom gestures.
 
+import { netTex } from "./lib/drawing";
 import { layout } from "./lib/layout";
 import type { LabelKind, Measure } from "./lib/drawing";
 import { collectNetUses, lint } from "./lib/lint";
@@ -114,9 +115,12 @@ interface Logic {
   describe(net: string): string;
 }
 
-function createLogic(stage: HTMLElement, onChange: () => void): Logic {
+// `panel` receives one button per input, showing its level and stepping it like a click on the
+// sheet does.
+function createLogic(stage: HTMLElement, panel: HTMLElement, onChange: () => void): Logic {
   let simulator: Simulator | null = null;
   let devices: Circuit["elements"] = [];
+  let labels: Circuit["labels"] = new Map();
   let loaded: string | null = null;
   // The levels the viewer chose, in the order chosen; they outlive a redraw.
   const chosen = new Map<string, 0 | 1>();
@@ -132,6 +136,12 @@ function createLogic(stage: HTMLElement, onChange: () => void): Logic {
       else node.setAttribute("data-level", String(level));
       node.classList.toggle("settable", simulator.inputs.includes(net));
     }
+    for (const chip of panel.querySelectorAll("[data-net]")) {
+      const level = chosen.get(chip.getAttribute("data-net")!);
+      if (level === undefined) chip.removeAttribute("data-level");
+      else chip.setAttribute("data-level", String(level));
+      chip.querySelector(".chip-level")!.textContent = level === undefined ? "–" : String(level);
+    }
     for (const node of stage.querySelectorAll("[data-device]")) {
       const device = devices.find((element) => element.name === node.getAttribute("data-device"));
       const state = isActive && device?.type === "device" ? simulator.conducts(device) : null;
@@ -140,10 +150,9 @@ function createLogic(stage: HTMLElement, onChange: () => void): Logic {
     }
   }
 
-  // A click on an input steps it through 0, 1 and unset.
-  stage.addEventListener("click", (event) => {
-    const net = (event.target as Element).closest("[data-net]")?.getAttribute("data-net");
-    if (simulator === null || !net || !simulator.inputs.includes(net)) return;
+  // Steps an input through 0, 1 and unset.
+  function step(net: string): void {
+    if (simulator === null || !simulator.inputs.includes(net)) return;
     const current = chosen.get(net);
     const next = current === undefined ? 0 : current === 0 ? 1 : null;
     if (next === null) chosen.delete(net);
@@ -151,18 +160,53 @@ function createLogic(stage: HTMLElement, onChange: () => void): Logic {
     simulator.set(net, next);
     paint();
     onChange();
+  }
+  stage.addEventListener("click", (event) => {
+    const net = (event.target as Element).closest("[data-net]")?.getAttribute("data-net");
+    if (net) step(net);
   });
+  panel.addEventListener("click", (event) => {
+    const net = (event.target as Element).closest("[data-net]")?.getAttribute("data-net");
+    if (net) step(net);
+  });
+  // Pointing at an input's button shows where that input runs on the sheet.
+  panel.addEventListener("pointerover", (event) => {
+    const net = (event.target as Element).closest("[data-net]")?.getAttribute("data-net");
+    highlightNet(stage, net ?? null);
+  });
+  panel.addEventListener("pointerleave", () => highlightNet(stage, null));
+
+  function fillPanel(): void {
+    panel.replaceChildren(
+      ...(simulator?.inputs ?? []).map((net) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "input-chip";
+        chip.setAttribute("data-net", net);
+        chip.title = "누르면 0 → 1 → 해제";
+        const name = document.createElement("span");
+        name.innerHTML = renderLabelContent(netTex(labels, net), true);
+        const level = document.createElement("span");
+        level.className = "chip-level";
+        chip.append(name, level);
+        return chip;
+      }),
+    );
+    panel.hidden = panel.childElementCount === 0;
+  }
 
   return {
     load(circuit, source) {
       if (source !== loaded) {
         simulator = new Simulator(circuit);
         devices = circuit.elements;
+        labels = circuit.labels;
         loaded = source;
         for (const net of [...chosen.keys()]) {
           if (!simulator.inputs.includes(net)) chosen.delete(net);
         }
         for (const [net, level] of chosen) simulator.set(net, level);
+        fillPanel();
       }
       paint();
     },

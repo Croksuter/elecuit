@@ -155,13 +155,13 @@ function drawBox(block: Block, sketch: Sketch): Pin[] {
       0,
       ...terminals.map((terminal, index) => {
         const caption = captionOf(terminal, index);
-        return caption === null ? 0 : sketch.captionWidth(caption, "name");
+        return caption === null ? 0 : sketch.captionWidth(caption, "caption");
       }),
     );
   const rows = Math.max(block.inputs.length, block.outputs.length, 1);
   const width = Math.max(
     44,
-    sketch.captionWidth(title, "name") + 16,
+    sketch.captionWidth(title, "caption") + 16,
     captionWidth(block.inputs) + captionWidth(block.outputs) + 24,
   );
   const titleRoom = 18;
@@ -175,7 +175,7 @@ function drawBox(block: Block, sketch: Sketch): Pin[] {
     ],
     { isClosed: true },
   );
-  sketch.caption([width / 2, titleRoom / 2 + 2], "middle", title, "name");
+  sketch.caption([width / 2, titleRoom / 2 + 2], "middle", title, "caption");
   const hasOwnTitle = block.title !== null || block.kind !== "block";
   if (hasOwnTitle) sketch.nameLabel([width / 2, -9], "middle", block.name);
 
@@ -194,7 +194,7 @@ function drawBox(block: Block, sketch: Sketch): Pin[] {
         ];
         sketch.stroke(mark);
       } else if (caption !== null) {
-        sketch.caption([isLeft ? 6 : width - 6, y], isLeft ? "start" : "end", caption, "name");
+        sketch.caption([isLeft ? 6 : width - 6, y], isLeft ? "start" : "end", caption, "caption");
       }
       return { net: terminal.net, x: outer, y, side: isLeft ? "left" : "right", needsLabel: true };
     });

@@ -516,3 +516,10 @@ code {
     transition: none;
   }
 }
+
+/* The inputs sit in a row below the canvas tools, clear of the buttons floating at the top. */
+.canvas-inputs {
+  position: relative;
+  z-index: 1;
+  margin: 52px 16px -44px;
+}

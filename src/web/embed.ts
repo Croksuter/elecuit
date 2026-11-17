@@ -93,8 +93,11 @@ function createFigure(
     tools.append(button);
     return button;
   }
+  const inputs = document.createElement("div");
+  inputs.className = "input-panel elecuit-inputs";
+  inputs.hidden = true;
   viewport.append(stage);
-  element.append(viewport, diagnosticsList, info, tools);
+  element.append(inputs, viewport, diagnosticsList, info, tools);
   const title = block.getAttribute("title");
   if (title) {
     const caption = document.createElement("figcaption");
@@ -114,7 +117,7 @@ function createFigure(
       info.textContent = about.filter(Boolean).join(" · ");
     }
   }
-  const logic = createLogic(stage, showInfo);
+  const logic = createLogic(stage, inputs, showInfo);
 
   // Zooms about a point of the viewport, so what is under the pointer stays under it.
   function zoomBy(factor: number, clientX: number, clientY: number): void {
@@ -139,6 +142,9 @@ function createFigure(
   addTool("맞춤", "처음 크기로 되돌립니다.", () => {
     figure.zoom = 1;
     refit();
+  });
+  const names = addTool("이름 숨기기", "PCLK 같은 소자 이름을 숨기거나 보입니다.", () => {
+    names.textContent = stage.classList.toggle("nameless") ? "이름 보이기" : "이름 숨기기";
   });
   const reset = addTool("값 지우기", "누른 입력과 기억된 상태를 지웁니다.", () => logic.reset());
   reset.hidden = true;
