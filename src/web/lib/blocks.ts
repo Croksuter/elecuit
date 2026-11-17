@@ -143,6 +143,11 @@ function drawBox(block: Block, sketch: Sketch): Pin[] {
   function captionOf(terminal: Terminal, index: number): Caption | null {
     if (block.kind === "block") return null;
     if (block.kind === "mux" && terminal.key === "in") return { text: String(index), isTex: false };
+    // Select pins count from the least significant bit, in the order `sel=` lists them.
+    const selects = block.inputs.filter((input) => input.key === "sel");
+    if (terminal.key === "sel" && selects.length > 1) {
+      return { text: `S_{${selects.indexOf(terminal)}}`, isTex: true };
+    }
     return PIN_CAPTIONS[terminal.key] ?? null;
   }
   const captionWidth = (terminals: Terminal[]): number =>
@@ -200,6 +205,10 @@ function drawBox(block: Block, sketch: Sketch): Pin[] {
 // Draws the block into the sketch and returns its pins. `feedback` holds the devices drawn as
 // part of an op-amp (see `drawOpamp`); other blocks take none.
 function drawBlock(block: Block, sketch: Sketch, feedback: Device[]): Pin[] {
+  return sketch.owned(block.name, () => drawOwnedBlock(block, sketch, feedback));
+}
+
+function drawOwnedBlock(block: Block, sketch: Sketch, feedback: Device[]): Pin[] {
   if (block.kind === "opamp") return drawOpamp(block, sketch, feedback);
   if (
     block.kind === "mux" ||

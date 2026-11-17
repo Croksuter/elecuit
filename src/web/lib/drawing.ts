@@ -8,6 +8,7 @@ type TextAnchor = "start" | "middle" | "end";
 
 interface LabelPrimitive {
   type: "label";
+  owner: string | null;
   x: number;
   y: number;
   anchor: TextAnchor;
@@ -22,9 +23,10 @@ interface LabelPrimitive {
 type Primitive =
   | { type: "wire"; net: string; points: Point[] }
   | { type: "dot"; net: string; x: number; y: number }
-  // `device` names the element a shape belongs to when the shape shows that element's state.
-  | { type: "shape"; d: string; isHeavy: boolean; device: string | null }
-  | { type: "circle"; x: number; y: number; r: number }
+  // `owner` names the element a shape, circle or caption belongs to, so the element can light up
+  // as a whole. `device` names it again on the one shape that shows the element's state.
+  | { type: "shape"; d: string; isHeavy: boolean; device: string | null; owner: string | null }
+  | { type: "circle"; x: number; y: number; r: number; owner: string | null }
   | LabelPrimitive;
 
 interface Drawing {
@@ -64,6 +66,7 @@ const LABEL_CLEARANCE = 1.5;
 // Collects primitives in one coordinate frame and measures the labels it adds.
 class Sketch {
   readonly primitives: Primitive[] = [];
+  private owner: string | null = null;
 
   constructor(
     private readonly labels: Circuit["labels"],
@@ -73,6 +76,17 @@ class Sketch {
   texOf(net: string): string {
     const label = this.labels.get(net);
     return label ? label.tex : (RAIL_TEX[net] ?? `\\mathit{${net.replace(/_/g, "\\_")}}`);
+  }
+
+  // Everything but wires and net names drawn inside `draw` belongs to the element `name`.
+  owned<Result>(name: string, draw: () => Result): Result {
+    const previous = this.owner;
+    this.owner = name;
+    try {
+      return draw();
+    } finally {
+      this.owner = previous;
+    }
   }
 
   wire(net: string, ...points: Point[]): void {
@@ -94,15 +108,16 @@ class Sketch {
       d: options.isClosed ? `${d}Z` : d,
       isHeavy: options.isHeavy ?? false,
       device: options.device ?? null,
+      owner: this.owner,
     });
   }
 
   shape(d: string): void {
-    this.primitives.push({ type: "shape", d, isHeavy: false, device: null });
+    this.primitives.push({ type: "shape", d, isHeavy: false, device: null, owner: this.owner });
   }
 
   circle([x, y]: Point, r: number): void {
-    this.primitives.push({ type: "circle", x, y, r });
+    this.primitives.push({ type: "circle", x, y, r, owner: this.owner });
   }
 
   netLabel([x, y]: Point, anchor: TextAnchor, net: string): void {
@@ -117,6 +132,7 @@ class Sketch {
       isTex: true,
       kind: "net",
       net,
+      owner: null,
       ...size,
     });
   }
@@ -127,7 +143,17 @@ class Sketch {
 
   caption([x, y]: Point, anchor: TextAnchor, caption: Caption, kind: LabelKind): void {
     const size = this.measure(caption.text, caption.isTex, kind);
-    this.primitives.push({ type: "label", x, y, anchor, ...caption, kind, net: null, ...size });
+    this.primitives.push({
+      type: "label",
+      x,
+      y,
+      anchor,
+      ...caption,
+      kind,
+      net: null,
+      owner: this.owner,
+      ...size,
+    });
   }
 
   netSize(net: string): { width: number; height: number } {

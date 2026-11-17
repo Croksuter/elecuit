@@ -60,28 +60,13 @@ function lint(circuit: Circuit): Diagnostic[] {
     }
   }
 
-  // A pull-up or pull-down whose gate is its own node inverted holds that node against leakage.
-  // Unless it is weak, it also fights whatever else drives the node.
   for (const element of circuit.elements) {
-    if (element.type !== "device" || element.isWeak) continue;
-    if (element.kind !== "nmos" && element.kind !== "pmos") continue;
-    const node = element.pins.find((pin) => !isRail(pin.net));
-    const rail = element.pins.find((pin) => isRail(pin.net));
-    const inverter = circuit.elements.find(
-      (other) =>
-        other.type === "block" &&
-        other.kind === "inv" &&
-        other.outputs[0].net === element.control!.net &&
-        other.inputs[0].net === node?.net,
+    if (element.type !== "device" || !element.isAssumedWeak) continue;
+    const node = element.pins.find((pin) => !isRail(pin.net))!;
+    warn(
+      element.line,
+      `${element.name}: ${node.net}를 반전한 ${element.control!.net}가 게이트로 돌아오는 keeper로 보고 약한 소자로 계산합니다. 줄 끝에 weak를 쓰면 이 안내가 사라집니다.`,
     );
-    if (!node || !rail || !inverter) continue;
-    const isHolding = (element.kind === "pmos") === isTopRail(rail.net);
-    if (isHolding) {
-      warn(
-        element.line,
-        `${element.name}: ${node.net}를 반전한 ${element.control!.net}가 게이트로 돌아오는 keeper로 보입니다. 약한 소자면 줄 끝에 weak를 붙이세요.`,
-      );
-    }
   }
 
   const drivers = new Map<string, string>();

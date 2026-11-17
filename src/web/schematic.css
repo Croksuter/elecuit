@@ -89,18 +89,24 @@
   font-size: 1em;
 }
 
+/* Hovering a net dims the sheet and lights the net and the elements on it. */
 .stage.focusing .wire,
 .stage.focusing .dot {
   opacity: 0.22;
 }
 
-.stage.focusing .label[data-net] {
-  opacity: 0.35;
+.stage.focusing .label,
+.stage.focusing .body,
+.stage.focusing .bubble {
+  opacity: 0.3;
+}
+
+.stage.focusing .on {
+  opacity: 1;
 }
 
 .stage .wire.on,
 .stage .dot.on {
-  opacity: 1;
   stroke: var(--paper-accent);
   fill: var(--paper-accent);
   stroke-width: 2.4;
@@ -110,12 +116,16 @@
   fill: none;
 }
 
-.stage .label.on {
-  opacity: 1;
+.stage .body.on,
+.stage .bubble.on {
+  stroke: var(--paper-accent);
+}
+
+.stage .label.on[data-net] {
   color: var(--paper-accent);
 }
 
-/* Logic levels: a net at 1 or 0 takes that level's colour, and its name carries the digit. */
+/* Logic levels: a net at 1 or 0 takes that level's colour, wires and name alike. */
 .stage .wire[data-level="1"],
 .stage .dot[data-level="1"] {
   stroke: var(--level-high);
@@ -138,17 +148,6 @@
 
 .stage .label[data-level="0"] {
   color: var(--level-low);
-}
-
-.label[data-level]::after {
-  content: attr(data-level);
-  margin-left: 2px;
-  font:
-    600 10px system-ui,
-    -apple-system,
-    "Segoe UI",
-    sans-serif;
-  vertical-align: super;
 }
 
 .stage .settable {

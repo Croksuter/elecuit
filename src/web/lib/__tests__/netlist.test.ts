@@ -126,12 +126,23 @@ describe("lint", () => {
     );
   });
 
-  it("asks for weak on a keeper and accepts the line once it has it", () => {
+  it("takes a keeper as weak and says so until the line says weak itself", () => {
     const stage = ["pmos P1 g=phi d=Y s=VDD", "nmos N1 g=A d=Y s=GND", "inv I1 in=Y out=Z"];
-    const strong = messages([...stage, "pmos PK g=Z d=Y s=VDD"].join("\n"));
-    expect(strong.some((entry) => entry.startsWith("4:warning:PK: Y를 반전한 Z가"))).toBe(true);
-    const weak = messages([...stage, "pmos PK g=Z d=Y s=VDD weak"].join("\n"));
-    expect(weak.filter((entry) => entry.includes("PK"))).toEqual([]);
+    const assumed = [...stage, "pmos PK g=Z d=Y s=VDD"].join("\n");
+    expect(parse(assumed).circuit.elements[3]).toMatchObject({ isWeak: true, isAssumedWeak: true });
+    expect(
+      messages(assumed).some((entry) =>
+        entry.startsWith("4:warning:PK: Y를 반전한 Z가 게이트로 돌아오는 keeper로 보고"),
+      ),
+    ).toBe(true);
+    const written = [...stage, "pmos PK g=Z d=Y s=VDD weak"].join("\n");
+    expect(parse(written).circuit.elements[3]).toMatchObject({
+      isWeak: true,
+      isAssumedWeak: false,
+    });
+    expect(messages(written).filter((entry) => entry.includes("PK"))).toEqual([]);
+    // The precharge transistor pulls the same way but is not gated by its own node.
+    expect(parse(assumed).circuit.elements[0]).toMatchObject({ isWeak: false });
   });
 
   it("rejects two drivers on one output and unreadable KaTeX", () => {

@@ -52,6 +52,8 @@ interface Device {
   value: Caption | null;
   // A weak device loses to any other path that drives the same node (a keeper, a bleeder).
   isWeak: boolean;
+  // True when the netlist did not say `weak` and the device was found to be a keeper.
+  isAssumedWeak: boolean;
 }
 
 // Reads its inputs and drives its outputs: a logic gate, an op-amp, a flip-flop or a plain box.
@@ -239,6 +241,46 @@ function selectSourceLines(text: string): { text: string; line: number }[] {
   return chosen.lines;
 }
 
+// A keeper holds a node at the rail it already sits at: a pull-up or pull-down whose gate is that
+// node inverted. It can only work if it is weaker than whatever else drives the node, so it is
+// taken as weak even when the netlist does not say so.
+function markKeepers(elements: Element[]): void {
+  const mos = elements.filter(
+    (element): element is Device =>
+      element.type === "device" && (element.kind === "nmos" || element.kind === "pmos"),
+  );
+  // Whether `output` is `input` inverted, by an inverter block or a pair of transistors.
+  function isInverted(input: string, output: string): boolean {
+    const hasBlock = elements.some(
+      (element) =>
+        element.type === "block" &&
+        element.kind === "inv" &&
+        element.inputs[0].net === input &&
+        element.outputs[0].net === output,
+    );
+    const pulls = (kind: "nmos" | "pmos", isRailSide: (net: string) => boolean): boolean =>
+      mos.some(
+        (device) =>
+          device.kind === kind &&
+          device.control!.net === input &&
+          device.pins.some((pin) => pin.net === output) &&
+          device.pins.some((pin) => isRailSide(pin.net)),
+      );
+    return hasBlock || (pulls("pmos", isTopRail) && pulls("nmos", isBottomRail));
+  }
+  for (const device of mos) {
+    if (device.isWeak) continue;
+    const node = device.pins.find((pin) => !isRail(pin.net));
+    const rail = device.pins.find((pin) => isRail(pin.net));
+    if (!node || !rail || node.net === device.control!.net) continue;
+    const isHolding = (device.kind === "pmos") === isTopRail(rail.net);
+    if (isHolding && isInverted(node.net, device.control!.net)) {
+      device.isWeak = true;
+      device.isAssumedWeak = true;
+    }
+  }
+}
+
 function parse(text: string): ParseResult {
   const circuit: Circuit = { elements: [], inputs: [], outputs: [], labels: new Map() };
   const diagnostics: Diagnostic[] = [];
@@ -415,6 +457,7 @@ function parse(text: string): ParseResult {
         control: spec.control === null ? null : terminals[0],
         value,
         isWeak,
+        isAssumedWeak: false,
       });
       continue;
     }
@@ -473,6 +516,7 @@ function parse(text: string): ParseResult {
     circuit.elements.push({ type: "block", kind, name, line, inputs, outputs, title });
   }
 
+  markKeepers(circuit.elements);
   return { circuit, diagnostics };
 }
 

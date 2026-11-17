@@ -80,6 +80,8 @@ class Simulator {
   private values = new Map<string, Level>();
   // Undriven nets whose level was lost when they shared charge with a net at the other level.
   private readonly shared = new Set<string>();
+  // Nets that paths at 0 and at 1 both drive for certain, as of the last pass.
+  private fought = new Set<string>();
 
   constructor(circuit: Circuit) {
     this.devices = circuit.elements.filter((element) => element.type === "device");
@@ -111,6 +113,11 @@ class Simulator {
     if (isTopRail(net)) return 1;
     if (isBottomRail(net)) return 0;
     return this.assigned.get(net) ?? this.values.get(net) ?? null;
+  }
+
+  // Whether the net is unknown because paths at 0 and at 1 both drive it.
+  isFoughtOver(net: string): boolean {
+    return this.fought.has(net);
   }
 
   // Whether the net is unknown because it shared its charge with a net at the other level.
@@ -167,7 +174,8 @@ class Simulator {
     for (const block of this.blocks) {
       for (const [net, level] of this.outputsOf(block, before)) sources.set(net, level);
     }
-    for (const [net, level] of this.assigned) sources.set(net, level);
+    // An input nobody has set is unknown; it is not an undriven node that keeps its last level.
+    for (const net of this.inputs) sources.set(net, this.assigned.get(net) ?? null);
 
     const links: Link[] = this.devices.flatMap((device): Link[] => {
       const ends = device.pins.map((pin) => pin.net) as [string, string];
@@ -213,6 +221,7 @@ class Simulator {
     });
 
     const next = new Map<string, Level>();
+    const fought = new Set<string>();
     for (const net of this.nets) {
       if (isSource(net)) {
         next.set(net, sourceLevel(net));
@@ -225,6 +234,7 @@ class Simulator {
         if (!maybe0 && !maybe1) continue;
         // Driven at this strength: one level for certain and the other ruled out, else unknown.
         level = sure0 && !maybe1 ? 0 : sure1 && !maybe0 ? 1 : null;
+        if (sure0 && sure1) fought.add(net);
         break;
       }
       if (level === undefined) {
@@ -244,6 +254,7 @@ class Simulator {
       this.shared.delete(net);
       next.set(net, level);
     }
+    this.fought = fought;
     return next;
   }
 

@@ -36,7 +36,9 @@ const GRAMMAR = `netlist 규칙
 - diode | zener | led 이름 a=애노드 k=캐소드
 - vsrc 이름 p=양극 n=음극
 - isrc 이름 p=노드 n=노드 (전류는 소자 안에서 p에서 n으로 흐름)
-- nmos | pmos 이름 g=게이트 d=드레인 s=소스 [weak] (keeper처럼 다른 경로에 지는 약한 소자는 줄 끝에 weak)
+- nmos | pmos 이름 g=게이트 d=드레인 s=소스 [weak]
+  - 다른 경로에 지는 약한 소자는 줄 끝에 weak를 씁니다.
+  - keeper(자기 노드를 반전한 신호가 게이트로 돌아오는 pull-up·pull-down)는 weak를 쓰지 않아도 elecuit이 약한 소자로 계산하고 그림에 (weak)로 표시합니다. 그래도 weak를 직접 쓰는 편이 분명합니다.
 - npn | pnp 이름 b=베이스 c=컬렉터 e=이미터
 
 블록 (입력을 받아 출력을 구동)
