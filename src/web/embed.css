@@ -107,3 +107,7 @@
 .elecuit-tools button[hidden] {
   display: none;
 }
+
+.elecuit-inputs {
+  margin: 0 4px 6px;
+}

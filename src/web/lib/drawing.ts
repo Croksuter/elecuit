@@ -3,7 +3,9 @@
 import type { Caption, Circuit } from "./netlist";
 
 type Point = [number, number];
-type LabelKind = "net" | "name" | "value";
+// "name" is an element's identifier (PCLK, G1); "caption" is text that is part of a symbol (a
+// pin's letter, a box's title), which stays when identifiers are hidden.
+type LabelKind = "net" | "name" | "caption" | "value";
 type TextAnchor = "start" | "middle" | "end";
 
 interface LabelPrimitive {
@@ -63,6 +65,12 @@ const RAIL_TEX: Record<string, string> = {
 const WIRE_CLEARANCE = 5;
 const LABEL_CLEARANCE = 1.5;
 
+// How a net's name is written: its `label` formula, a rail's symbol, or the name in italics.
+function netTex(labels: Circuit["labels"], net: string): string {
+  const label = labels.get(net);
+  return label ? label.tex : (RAIL_TEX[net] ?? `\\mathit{${net.replace(/_/g, "\\_")}}`);
+}
+
 // Collects primitives in one coordinate frame and measures the labels it adds.
 class Sketch {
   readonly primitives: Primitive[] = [];
@@ -74,8 +82,7 @@ class Sketch {
   ) {}
 
   texOf(net: string): string {
-    const label = this.labels.get(net);
-    return label ? label.tex : (RAIL_TEX[net] ?? `\\mathit{${net.replace(/_/g, "\\_")}}`);
+    return netTex(this.labels, net);
   }
 
   // Everything but wires and net names drawn inside `draw` belongs to the element `name`.
@@ -315,4 +322,4 @@ function shift(primitive: Primitive, dx: number, dy: number): Primitive {
 }
 
 export type { Box, Drawing, LabelKind, Measure, Obstacle, Point, Primitive };
-export { boundsOf, isBoxFree, isWireClear, labelBox, obstaclesOf, overlaps, shift, Sketch };
+export { boundsOf, isBoxFree, isWireClear, labelBox, netTex, obstaclesOf, overlaps, shift, Sketch };

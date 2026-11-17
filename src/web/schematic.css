@@ -74,7 +74,8 @@
   font-size: 15px;
 }
 
-.label-name {
+.label-name,
+.label-caption {
   font:
     11px system-ui,
     -apple-system,
@@ -168,6 +169,78 @@
 
 .sheet .body[data-state="off"] {
   opacity: 0.3;
+}
+
+/* Hides the elements' identifiers (PCLK, G1); net names and the text inside symbols stay. */
+.stage.nameless .label-name {
+  display: none;
+}
+
+/* The inputs gathered in one row: each button shows an input's level and steps it on a click. */
+.input-panel {
+  --level-high: #d9480f;
+  --level-low: #1971c2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.input-panel[hidden] {
+  display: none;
+}
+
+.input-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.input-chip:hover {
+  border-color: currentColor;
+}
+
+.input-chip .katex {
+  font-size: 1em;
+}
+
+.chip-level {
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  font:
+    600 12px/18px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  text-align: center;
+}
+
+.input-chip[data-level="1"] {
+  border-color: var(--level-high);
+}
+
+.input-chip[data-level="1"] .chip-level {
+  background: var(--level-high);
+  color: #ffffff;
+}
+
+.input-chip[data-level="0"] {
+  border-color: var(--level-low);
+}
+
+.input-chip[data-level="0"] .chip-level {
+  background: var(--level-low);
+  color: #ffffff;
 }
 
 .measure {

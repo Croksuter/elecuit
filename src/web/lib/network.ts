@@ -57,6 +57,7 @@ const LABEL_HEIGHT = 16;
 const CAP_CONDUCTANCE = 1e-5;
 // Nodes closer than this in potential share a level, and a device between them lies flat.
 const LEVEL_TOLERANCE = 2e-4;
+const WEAK_MARK = { text: "(weak)", isTex: false };
 const CROSSING_COST = 1000;
 // What one place further right costs a chain whose control comes from outside the cluster; more
 // than a unit of bus length, so such a chain ends up where a wire from the left can reach it.
@@ -487,8 +488,9 @@ function layoutNetwork(devices: Device[], sketch: Sketch): Pin[] {
   function valueWidth(device: Device): number {
     return device.value === null ? 0 : sketch.captionWidth(device.value, "value");
   }
+  // A device lying flat has no room beside its name, so there the mark is part of the name.
   function shownName(device: Device): string {
-    return device.isWeak ? `${device.name} (weak)` : device.name;
+    return device.isWeak ? `${device.name} ${WEAK_MARK.text}` : device.name;
   }
   function nameWidth(device: Device): number {
     return sketch.captionWidth({ text: shownName(device), isTex: false }, "name");
@@ -582,11 +584,13 @@ function layoutNetwork(devices: Device[], sketch: Sketch): Pin[] {
     }
     const labelX = x + BODY_HALF[device.kind] + NAME_GAP;
     const middle = top + DEVICE_LENGTH / 2;
-    sketch.nameLabel(
-      [labelX, device.value === null ? middle : middle - 9],
-      "start",
-      shownName(device),
-    );
+    // An upright device shows "(weak)" as part of the symbol, so it stays when names are hidden.
+    const nameY = device.value === null ? middle : middle - 9;
+    sketch.nameLabel([labelX, nameY], "start", device.name);
+    if (device.isWeak) {
+      const width = sketch.captionWidth({ text: device.name, isTex: false }, "name");
+      sketch.caption([labelX + width + 3, nameY], "start", WEAK_MARK, "caption");
+    }
     if (device.value !== null) sketch.caption([labelX, middle + 9], "start", device.value, "value");
   }
 

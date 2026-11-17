@@ -68,7 +68,8 @@ let isFitting = true;
 let netUses = new Map<string, NetUse[]>();
 let hovered: string | null = null;
 const resetLogic = element<HTMLButtonElement>("reset-logic");
-const logic = createLogic(stage, () => showNet(hovered));
+const logic = createLogic(stage, element<HTMLDivElement>("inputs"), () => showNet(hovered));
+const toggleNames = element<HTMLButtonElement>("toggle-names");
 let toastTimer = 0;
 
 function showToast(message: string): void {
@@ -264,6 +265,9 @@ element("zoom-fit").addEventListener("click", () => {
 });
 element("save-svg").addEventListener("click", () => void exportSheet("svg"));
 resetLogic.addEventListener("click", () => logic.reset());
+toggleNames.addEventListener("click", () => {
+  toggleNames.textContent = stage.classList.toggle("nameless") ? "이름 보이기" : "이름 숨기기";
+});
 element("save-png").addEventListener("click", () => void exportSheet("png"));
 for (const id of ["copy-prompt", "empty-prompt"]) {
   element(id).addEventListener(
