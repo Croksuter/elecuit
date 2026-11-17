@@ -8,7 +8,13 @@ import { describe, expect, it } from "vitest";
 import { lint } from "../lint";
 import { parse } from "../netlist";
 import { version } from "../../../../package.json";
-import { canvasPrompt, EMBED_SCRIPT_URL, EXAMPLE } from "../prompt";
+import {
+  canvasPrompt,
+  EMBED_SCRIPT_URL,
+  EXAMPLE,
+  LATEST_DOCUMENT_URL,
+  promptDocument,
+} from "../prompt";
 
 function messages(text: string): string[] {
   const { circuit, diagnostics } = parse(text);
@@ -103,10 +109,21 @@ describe("canvasPrompt", () => {
     expect(version).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  it("keeps every address in the README on the current version", () => {
+  it("keeps the README on the latest document address and the current bundle version", () => {
     const readme = readFileSync(new URL("../../../../README.md", import.meta.url), "utf8");
-    const versions = [...readme.matchAll(/elecuit@([\w.]+)\/dist\/(\w+\.\w+)/g)];
-    expect(versions.map((match) => match[2]).sort()).toEqual(["elecuit.js", "prompt.md"]);
-    expect(new Set(versions.map((match) => match[1]))).toEqual(new Set([version]));
+    const addresses = [...readme.matchAll(/https:\/\/cdn\.jsdelivr\.net\/gh\/[\w./@-]+/g)];
+    expect(addresses.map((match) => match[0]).sort()).toEqual(
+      [EMBED_SCRIPT_URL, LATEST_DOCUMENT_URL].sort(),
+    );
+  });
+});
+
+describe("promptDocument", () => {
+  it("states its version, where the latest document is, and the matching bundle", () => {
+    const document = promptDocument();
+    expect(document).toContain(`버전: ${version}\n`);
+    expect(document).toContain(`최신 문서: ${LATEST_DOCUMENT_URL}\n`);
+    expect(document).toContain(`<script src="${EMBED_SCRIPT_URL}">`);
+    expect(LATEST_DOCUMENT_URL).toContain("@latest/dist/prompt.md");
   });
 });

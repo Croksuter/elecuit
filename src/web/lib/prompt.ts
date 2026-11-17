@@ -18,6 +18,10 @@ inv  I1 in=Y  out=Z
 // which is the package version, so a template keeps the bundle it was written for.
 const EMBED_SCRIPT_URL = `https://cdn.jsdelivr.net/gh/Croksuter/elecuit@${version}/dist/elecuit.js`;
 
+// Always the document of the highest release tag; jsDelivr refreshes this alias within 12 hours
+// at its edge, and a client may keep its own copy for up to 7 days.
+const LATEST_DOCUMENT_URL = "https://cdn.jsdelivr.net/gh/Croksuter/elecuit@latest/dist/prompt.md";
+
 const GRAMMAR = `netlist 규칙
 - 한 줄에 소자 하나: 종류 이름 단자=노드 …
 - 연결은 노드 이름이 같은지로만 정해집니다. 같은 노드는 철자와 대소문자까지 똑같이 씁니다.
@@ -73,4 +77,26 @@ ${EXAMPLE}</script>
 ${GRAMMAR}`;
 }
 
-export { canvasPrompt, EMBED_SCRIPT_URL, EXAMPLE, PROMPT };
+// The document a model reads by address: how to apply the instructions, how to move to a newer
+// release of this document, then the Canvas instructions themselves.
+function promptDocument(): string {
+  return `# elecuit 회로도 지침
+
+버전: ${version}
+최신 문서: ${LATEST_DOCUMENT_URL}
+
+사용자가 이 문서의 주소를 주면서 회로도를 그리라고 하면, 그 대화가 끝날 때까지 아래 지침을 따릅니다.
+
+최신 확인
+- 지침을 처음 적용할 때 위의 "최신 문서" 주소를 한 번 엽니다. 그 문서의 버전이 이 문서보다 높으면, 이 문서 대신 그 문서의 지침과 템플릿을 따릅니다.
+- 그때는 "최신 지침(버전 x.y.z)으로 진행합니다."라고 한 문장으로만 알립니다. 무엇이 바뀌었는지는 설명하지 않습니다.
+- 버전이 같거나 주소를 열 수 없으면 아무 말 없이 이 문서로 진행합니다.
+- 사용자가 준 주소가 이미 "최신 문서" 주소이면 다시 열지 않습니다.
+
+적용하라는 요청에는 "알겠습니다. 앞으로 이 형식으로 회로도를 그리겠습니다."처럼 한두 문장으로만 답합니다. 이 문서의 규칙, 템플릿, elecuit의 동작 방식을 요약하거나 설명하지 않고, 회로도도 사용자가 회로를 물을 때 그립니다.
+
+${canvasPrompt(EMBED_SCRIPT_URL)}
+`;
+}
+
+export { canvasPrompt, EMBED_SCRIPT_URL, EXAMPLE, LATEST_DOCUMENT_URL, PROMPT, promptDocument };
